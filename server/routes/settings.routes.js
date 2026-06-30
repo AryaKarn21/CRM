@@ -1,0 +1,146 @@
+import express from 'express'
+import bcrypt from 'bcryptjs'
+import { Company, User, UserCompany } from '../models/index.js'
+import { protect, authorize } from '../middleware/auth.js'
+
+const router = express.Router()
+
+// ── Company / Department settings ────────────────────────
+router.get('/companies', protect, async (req, res, next) => {
+  try {
+    const companies = await Company.findAll({ order: [['name', 'ASC']] })
+    res.json(companies)
+  } catch (err) { next(err) }
+})
+
+import { sequelize } from '../config/db.js';
+
+router.post(
+  '/companies',
+  protect,
+  authorize('super_admin'),
+  async (req, res, next) => {
+    try {
+      console.log("========== CREATE COMPANY ==========");
+      console.log("REQ USER:", req.user);
+
+      const company = await Company.create(req.body);
+
+      console.log("COMPANY CREATED:");
+      console.log(company.toJSON());
+
+      const relation = await UserCompany.create({
+        userId: req.user.id,
+        companyId: company.id,
+      });
+
+      console.log("RELATION CREATED:");
+      console.log(relation.toJSON());
+
+      res.status(201).json(company);
+    } catch (err) {
+      console.error(err);
+      next(err);
+    }
+  }
+);
+
+router.patch('/companies/:id', protect, authorize('super_admin'), async (req, res, next) => {
+  try {
+    const company = await Company.findByPk(req.params.id)
+    if (!company) return res.status(404).json({ message: 'Department not found' })
+    await company.update(req.body)
+    res.json(company)
+  } catch (err) { next(err) }
+})
+
+// ── Users ─────────────────────────────────────────────────
+router.get('/users', protect, authorize('super_admin', 'admin'), async (req, res, next) => {
+  try {
+    const users = await User.findAll({
+      include: [{ model: Company, as: 'companies', attributes: ['id', 'name'] }],
+      order: [['name', 'ASC']],
+    })
+    res.json(users)
+  } catch (err) { next(err) }
+})
+
+router.post('/users', protect, authorize('super_admin', 'admin'), async (req, res, next) => {
+  try {
+    const { companies = [], ...userData } = req.body
+    const user = await User.create(userData)
+    if (companies.length) {
+      await UserCompany.bulkCreate(companies.map(companyId => ({ userId: user.id, companyId })))
+    }
+    res.status(201).json(user)
+  } catch (err) { next(err) }
+})
+
+router.patch('/users/:id', protect, authorize('super_admin', 'admin'), async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.params.id)
+    if (!user) return res.status(404).json({ message: 'User not found' })
+    const { companies, ...rest } = req.body
+    await user.update(rest)
+    if (companies) {
+      await UserCompany.destroy({ where: { userId: user.id } })
+      await UserCompany.bulkCreate(companies.map(companyId => ({ userId: user.id, companyId })))
+    }
+    res.json(user)
+  } catch (err) { next(err) }
+})
+
+router.patch('/users/:id/password', protect, async (req, res, next) => {
+  try {
+    if (req.user.id !== req.params.id && req.user.role !== 'super_admin') {
+      return res.status(403).json({ message: 'Not authorized' })
+    }
+    const user = await User.findByPk(req.params.id)
+    if (!user) return res.status(404).json({ message: 'User not found' })
+    user.password = req.body.password // hashed automatically by the beforeSave hook
+    await user.save()
+    res.json({ message: 'Password updated' })
+  } catch (err) { next(err) }
+})
+router.delete(
+  '/companies/:id',
+  protect,
+  authorize('super_admin'),
+  async (req, res, next) => {
+    try {
+      const company = await Company.findByPk(req.params.id)
+
+      if (!company) {
+        return res.status(404).json({
+          message: 'Company not found',
+        })
+      }
+
+      await UserCompany.destroy({
+        where: { companyId: company.id },
+      })
+
+      await company.destroy()
+
+      res.json({
+        message: 'Company deleted successfully',
+      })
+    } catch (err) {
+      next(err)
+    }
+  }
+)
+
+router.delete('/users/:id', protect, authorize('super_admin'), async (req, res, next) => {
+  try {
+    await User.destroy({ where: { id: req.params.id } })
+
+    res.json({
+      message: 'User deleted',
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+export default router
