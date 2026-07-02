@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Save } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { settingsAPI } from '@/api/settings.api'
 import { Tabs } from '@/components/ui/Tabs'
 import DataTable from '@/components/shared/DataTable'
@@ -456,7 +457,7 @@ function CompanyTab() {
                     setShowDialog(false)
                   }}
                 >
-                  Cancel 
+                  Cancel
                 </button>
 
                 <button
@@ -483,16 +484,49 @@ function CompanyTab() {
 }
 
 function UsersTab() {
+  const [showDialog, setShowDialog] = useState(false)
   const queryClient = useQueryClient()
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm()
   const [params, setParams] = useState({ page: 1, limit: 10 })
-
+  const navigate = useNavigate()
   const { data, isLoading } = useQuery({
     queryKey: ['settings-users', params],
     queryFn: () => settingsAPI.getUsers(params).then(r => r.data),
   })
+  const createUserMutation = useMutation({
+  mutationFn: (data) => settingsAPI.createUser(data),
+
+  onSuccess: () => {
+    toast.success('User created successfully')
+
+    queryClient.invalidateQueries({
+      queryKey: ['settings-users'],
+    })
+
+    reset()
+
+    setShowDialog(false)
+  },
+
+  onError: (err) => {
+    toast.error(
+      err.response?.data?.message ||
+      'Unable to create user'
+    )
+  },
+})
+const onSubmit = (data) => {
+  createUserMutation.mutate(data)
+}
 
   const deactivateMutation = useMutation({
-    mutationFn: settingsAPI.deactivateUser,
+    //mutationFn: settingsAPI.deactivateUser,
+    mutationFn: (id) => settingsAPI.deactivateUser(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings-users'] })
       toast.success('User deactivated')
@@ -527,30 +561,178 @@ function UsersTab() {
       render: (val) => val ? formatDate(val) : 'Never',
     },
     {
-      key: 'id', label: '',
-      render: (id, row) => row.status === 'active' ? (
+      key: 'id',
+      label: 'Actions',
+      render: (id) => (
         <button
-          className="btn btn-ghost btn-sm text-red-500"
-          onClick={() => { if (confirm('Deactivate user?')) deactivateMutation.mutate(id) }}
+          className="btn btn-secondary btn-sm"
+          onClick={(e) => {
+            e.stopPropagation()
+            navigate(`/settings/users/${id}/edit`)
+          }}
         >
-          Deactivate
+          Edit
         </button>
-      ) : null,
+      ),
     },
   ]
 
   return (
-    <DataTable
-      columns={columns}
-      data={data?.users || []}
-      total={data?.total || 0}
-      page={params.page}
-      pageSize={params.limit}
-      loading={isLoading}
-      onPageChange={(page) => setParams(p => ({ ...p, page }))}
-      emptyTitle="No users found"
+    <>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-lg font-semibold">
+            Users
+          </h2>
+
+          <p className="text-sm">
+            Manage all users
+          </p>
+        </div>
+
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowDialog(true)}
+        >
+          + Add User
+        </button>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={data?.users || []}
+        total={data?.total || 0}
+        page={params.page}
+        pageSize={params.limit}
+        loading={isLoading}
+        onPageChange={(page) =>
+          setParams(p => ({ ...p, page }))
+        }
+        onRowClick={(row) => navigate(`/settings/users/${row.id}`)}
+        emptyTitle="No users found"
+      />
+      {showDialog && (
+        <div className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ background: "rgba(0,0,0,.5)" }}>
+
+          <div className="card w-[500px] p-6">
+
+            <h2 className="text-xl font-bold mb-5">
+              Add User
+            </h2>
+
+           <form
+  onSubmit={handleSubmit(onSubmit)}
+  className="space-y-4"
+>
+
+  <div>
+    <label>Name</label>
+
+    <input
+      className="input w-full"
+      {...register('name', {
+        required: 'Name is required',
+      })}
     />
+
+    {errors.name && (
+      <p className="text-red-500 text-xs">
+        {errors.name.message}
+      </p>
+    )}
+  </div>
+
+  <div>
+    <label>Email</label>
+
+    <input
+      type="email"
+      className="input w-full"
+      {...register('email', {
+        required: 'Email is required',
+      })}
+    />
+  </div>
+
+  <div>
+    <label>Password</label>
+
+    <input
+      type="password"
+      className="input w-full"
+      {...register('password', {
+        required: 'Password is required',
+      })}
+    />
+  </div>
+
+  <div>
+    <label>Phone</label>
+
+    <input
+      className="input w-full"
+      {...register('phone')}
+    />
+  </div>
+
+  <div>
+    <label>Role</label>
+
+    <select
+      className="input w-full"
+      {...register('role')}
+    >
+      <option value="employee">Employee</option>
+      <option value="manager">Manager</option>
+      <option value="accountant">Accountant</option>
+      <option value="admin">Admin</option>
+      <option value="super_admin">Super Admin</option>
+    </select>
+  </div>
+
+  <div className="flex justify-end gap-3">
+
+    <button
+      type="button"
+      className="btn"
+      onClick={() => {
+        reset()
+        setShowDialog(false)
+      }}
+    >
+      Cancel
+    </button>
+
+    <button
+      className="btn btn-primary"
+      disabled={createUserMutation.isPending}
+    >
+      {createUserMutation.isPending
+        ? 'Creating...'
+        : 'Create User'}
+    </button>
+
+  </div>
+
+</form>
+
+            <button
+              className="btn btn-primary mt-5"
+              onClick={() => setShowDialog(false)}
+            >
+              Close
+            </button>
+
+          </div>
+
+        </div>
+      )}
+
+    </>
+
   )
+
 }
 
 function RolesTab() {
@@ -568,7 +750,7 @@ function RolesTab() {
   return (
     <div className="flex flex-col gap-4">
       {data?.roles?.map(role => (
-        <div key={role._id} className="rounded-xl border p-4" style={{ borderColor: 'var(--border)' }}>
+        <div key={role.id} className="rounded-xl border p-4" style={{ borderColor: 'var(--border)' }}>
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-[14px] font-semibold" style={{ color: 'var(--text-primary)' }}>
@@ -637,6 +819,7 @@ function AuditTab() {
       key: 'createdAt', label: 'Time',
       render: (val) => formatDate(val, 'MMM d, yyyy HH:mm'),
     },
+
   ]
 
   return (
@@ -646,6 +829,8 @@ function AuditTab() {
       total={data?.total || 0}
       loading={isLoading}
       emptyTitle="No audit logs"
+
+
     />
   )
 }

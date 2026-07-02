@@ -4,7 +4,7 @@ import { Company, User, UserCompany } from '../models/index.js'
 import { protect, authorize } from '../middleware/auth.js'
 
 const router = express.Router()
-
+console.log("SETTINGS ROUTE LOADED");
 // ── Company / Department settings ────────────────────────
 router.get('/companies', protect, async (req, res, next) => {
   try {
@@ -55,40 +55,136 @@ router.patch('/companies/:id', protect, authorize('super_admin'), async (req, re
 })
 
 // ── Users ─────────────────────────────────────────────────
-router.get('/users', protect, authorize('super_admin', 'admin'), async (req, res, next) => {
-  try {
-    const users = await User.findAll({
-      include: [{ model: Company, as: 'companies', attributes: ['id', 'name'] }],
-      order: [['name', 'ASC']],
-    })
-    res.json(users)
-  } catch (err) { next(err) }
-})
 
+router.get(
+  '/users',
+  protect,
+  authorize('super_admin', 'admin'),
+  async (req, res, next) => {
+    try {
+      const users = await User.findAll({
+        include: [
+          {
+            model: Company,
+            as: 'companies',
+            attributes: ['id', 'name'],
+          },
+        ],
+        order: [['name', 'ASC']],
+      })
+
+      res.json({
+        users,
+        total: users.length,
+      })
+    } catch (err) {
+      next(err)
+    }
+  }
+)
+router.get(
+  '/users/:id',
+  protect,
+  authorize('super_admin', 'admin'),
+  async (req, res, next) => {
+    try {
+      const user = await User.findByPk(req.params.id, {
+        include: [
+          {
+            model: Company,
+            as: 'companies',
+            attributes: ['id', 'name'],
+          },
+        ],
+      })
+
+      if (!user) {
+        return res.status(404).json({
+          message: 'User not found',
+        })
+      }
+
+      res.json(user)
+    } catch (err) {
+      next(err)
+    }
+  }
+)
 router.post('/users', protect, authorize('super_admin', 'admin'), async (req, res, next) => {
   try {
     const { companies = [], ...userData } = req.body
+    const exists = await User.findOne({
+    where: {
+        email: userData.email
+    }
+})
+
+if (exists) {
+    return res.status(400).json({
+        message: 'Email already exists'
+    })
+}
     const user = await User.create(userData)
+    
     if (companies.length) {
       await UserCompany.bulkCreate(companies.map(companyId => ({ userId: user.id, companyId })))
     }
     res.status(201).json(user)
   } catch (err) { next(err) }
 })
-
 router.patch('/users/:id', protect, authorize('super_admin', 'admin'), async (req, res, next) => {
   try {
     const user = await User.findByPk(req.params.id)
-    if (!user) return res.status(404).json({ message: 'User not found' })
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
     const { companies, ...rest } = req.body
+
     await user.update(rest)
+
     if (companies) {
       await UserCompany.destroy({ where: { userId: user.id } })
-      await UserCompany.bulkCreate(companies.map(companyId => ({ userId: user.id, companyId })))
+
+      await UserCompany.bulkCreate(
+        companies.map(companyId => ({
+          userId: user.id,
+          companyId,
+        }))
+      )
     }
+
     res.json(user)
-  } catch (err) { next(err) }
+  } catch (err) {
+    next(err)
+  }
 })
+
+router.patch(
+  '/users/:id/status',
+  protect,
+  authorize('super_admin', 'admin'),
+  async (req, res, next) => {
+    try {
+      const user = await User.findByPk(req.params.id)
+
+      if (!user) {
+        return res.status(404).json({
+          message: 'User not found',
+        })
+      }
+
+      await user.update({
+        status: req.body.status,
+      })
+
+      res.json(user)
+    } catch (err) {
+      next(err)
+    }
+  }
+)
 
 router.patch('/users/:id/password', protect, async (req, res, next) => {
   try {

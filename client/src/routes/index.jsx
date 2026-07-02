@@ -3,7 +3,6 @@ import { lazy, Suspense } from 'react'
 import ProtectedRoute from './ProtectedRoute'
 import AppShell from '@/components/layout/AppShell'
 import Spinner from '@/components/ui/Spinner'
-
 // ── Eagerly loaded (always needed) ──────────────────────────
 import Login from '@/pages/auth/Login'
 import NotFound from '@/pages/errors/NotFound'
@@ -32,6 +31,8 @@ const ExpensesList = lazy(() => import('@/pages/finance/expenses/ExpensesList'))
 const GeneralLedger = lazy(() => import('@/pages/finance/ledger/GeneralLedger'))
 const ItemsList = lazy(() => import('@/pages/inventory/ItemsList'))
 const PurchaseOrders = lazy(() => import('@/pages/procurement/PurchaseOrders'))
+const PurchaseDetails = lazy(() => import('@/pages/procurement/PurchaseDetails'))
+const PurchaseEdit = lazy(() => import('@/pages/procurement/PurchaseEdit'))
 const ProjectsList = lazy(() => import('@/pages/projects/ProjectsList'))
 const ProjectDetail = lazy(() => import('@/pages/projects/ProjectDetail'))
 const ProjectEdit = lazy(() => import('@/pages/projects/ProjectEdit'))
@@ -40,6 +41,8 @@ const SupportEdit = lazy(() => import('@/pages/support/SupportEdit'))
 const SupportDetail = lazy(() => import('@/pages/support/SupportDetail'))
 const Analytics = lazy(() => import('@/pages/reports/Analytics'))
 const Settings = lazy(() => import('@/pages/settings/Settings'))
+const UserDetails = lazy(() => import('@/pages/settings/users/UserDetails'))
+const UserEdit = lazy(() => import('@/pages/settings/users/UserEdit'))
 
 // ── Suspense wrapper ─────────────────────────────────────────
 function PageLoader() {
@@ -92,6 +95,10 @@ export const router = createBrowserRouter([
           // Other modules
           { path: '/inventory', element: <S><ItemsList /></S> },
           { path: '/procurement', element: <S><PurchaseOrders /></S> },
+          // Procurement
+          { path: '/procurement/orders/:id', element: <S><PurchaseDetails /></S> },
+          { path: '/procurement/orders/:id/edit', element: <S><PurchaseEdit /></S> },
+
           { path: '/projects', element: <S><ProjectsList /></S> },
           { path: '/projects/:id', element: <S><ProjectDetail /></S> },
           { path: '/projects/:id/edit', element: <S><ProjectEdit /></S> },
@@ -100,9 +107,26 @@ export const router = createBrowserRouter([
           { path: '/support/:id/edit', element: <S><SupportEdit /></S> },
           { path: '/reports', element: <S><Analytics /></S> },
           { path: '/settings', element: <S><Settings /></S> },
+          {
+            path: '/settings/users/:id',
+            element: (
+              <S>
+                <UserDetails />
+              </S>
+            ),
+          },
+          {
+  path: '/settings/users/:id/edit',
+  element: (
+    <S>
+      <UserEdit />
+    </S>
+  ),
+},
         ],
       },
     ],
   },
+   
   { path: '*', element: <NotFound /> },
 ])

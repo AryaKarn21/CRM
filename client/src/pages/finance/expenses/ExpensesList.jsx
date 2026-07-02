@@ -71,7 +71,7 @@ export default function ExpensesList() {
     render: (val) => val ? `${val.firstName || ''} ${val.lastName || ''}`.trim() || val.email || '—' : '—',
     },
     {
-      key: '_id', label: '',
+      key: 'id', label: '',
       render: (id) => (
         <div onClick={e => e.stopPropagation()}>
           <button className="btn btn-ghost btn-sm text-red-500" onClick={() => {

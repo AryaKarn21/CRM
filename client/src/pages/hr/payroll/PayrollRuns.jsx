@@ -59,7 +59,7 @@ export default function PayrollRuns() {
     },
     { key: 'processedAt', label: 'Processed', render: (val) => val ? formatDate(val) : '—' },
     {
-      key: '_id', label: '',
+      key: 'id', label: '',
       render: (id, row) => (
         <div onClick={e => e.stopPropagation()}>
           {row.status === 'draft' && (

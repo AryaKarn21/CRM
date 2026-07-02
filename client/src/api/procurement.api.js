@@ -5,6 +5,14 @@ export const procurementAPI = {
   getPurchaseOrders: (params) =>
     api.get('/procurement/orders', { params }),
 
+  getPurchaseOrder(id) {
+    return api.get(`/procurement/orders/${id}`)
+  },
+ 
+  updatePurchaseOrder(id, data) {
+    return api.patch(`/procurement/orders/${id}`, data)
+  },
+ 
   getPOById: (id) =>
     api.get(`/procurement/orders/${id}`),
 
@@ -12,7 +20,7 @@ export const procurementAPI = {
     api.post('/procurement/orders', data),
 
   updatePO: (id, data) =>
-    api.patch(`/procurement/orders/${id}`, data),
+    api.put(`/procurement/orders/${id}`, data),
 
   approvePO: (id) =>
     api.patch(`/procurement/orders/${id}/approve`),

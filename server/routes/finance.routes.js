@@ -80,6 +80,8 @@ router.post('/ledger', protect, async (req, res, next) => {
     res.status(201).json(entry)
   } catch (err) { next(err) }
 })
+  
+
 
 // ── Summary ───────────────────────────────────────────────
 router.get('/summary', protect, async (req, res, next) => {
@@ -100,5 +102,81 @@ router.get('/summary', protect, async (req, res, next) => {
     })
   } catch (err) { next(err) }
 })
+router.get('/overview', protect, async (req, res, next) => {
+  try {
+    const company = req.companyId
+
+    const totalExpenses = await Expense.sum('amount', {
+      where: { companyId: company }
+    })
+
+    const totalEntries = await LedgerEntry.count({
+      where: { companyId: company }
+    })
+
+    res.json({
+      totalExpenses: totalExpenses || 0,
+      totalLedgerEntries: totalEntries || 0
+    })
+
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/reports/revenue-by-month', protect, async (req, res, next) => {
+
+  try {
+
+    res.json([])
+
+  }
+
+  catch(err){
+
+    next(err)
+
+  }
+
+})
+
+router.patch('/expenses/:id', protect, async (req,res,next)=>{
+
+try{
+
+const expense=await Expense.findByPk(req.params.id)
+
+if(!expense)
+return res.status(404).json({message:'Expense not found'})
+
+await expense.update(req.body)
+
+res.json(expense)
+
+}catch(err){
+
+next(err)
+
+}
+
+})
+
+router.patch('/expenses/:id', protect, async (req, res, next) => {
+  try {
+    const expense = await Expense.findByPk(req.params.id)
+
+    if (!expense) {
+      return res.status(404).json({ message: 'Expense not found' })
+    }
+
+    await expense.update(req.body)
+
+    res.json(expense)
+  } catch (err) {
+    next(err)
+  }
+})
 
 export default router
+
+

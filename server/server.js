@@ -42,7 +42,12 @@ app.use('/api/dashboard', protect, resolveCompany, dashboardRoutes)
 app.use('/api/employees', protect, resolveCompany, employeesRoutes)
 app.use('/api/attendance', protect, resolveCompany, attendanceRoutes)
 app.use('/api/leaves', protect, resolveCompany, leavesRoutes)
-app.use('/api/payroll', protect, resolveCompany, payrollRoutes)
+app.use('/api/payroll',
+  protect,
+  resolveCompany,
+  payrollRoutes
+)
+//app.use('/api/payroll', protect, resolveCompany, payrollRoutes)
 app.use('/api/finance', protect, resolveCompany, financeRoutes)
 app.use('/api/inventory', protect, resolveCompany, inventoryRoutes)
 app.use('/api/procurement', protect, resolveCompany, procurementRoutes)

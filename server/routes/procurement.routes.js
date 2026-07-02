@@ -24,6 +24,110 @@ router.post('/vendors', protect, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// ── Update Purchase Order ─────────────────────────────────
+router.put('/orders/:id', protect, async (req, res, next) => {
+  const t = await sequelize.transaction()
+
+  try {
+    const company = getCompany(req)
+
+    const order = await PurchaseOrder.findOne({
+      where: {
+        id: req.params.id,
+        companyId: company,
+      },
+      transaction: t,
+    })
+
+    if (!order) {
+      await t.rollback()
+
+      return res.status(404).json({
+        message: 'Purchase Order not found',
+      })
+    }
+
+    const {
+      vendorId,
+      expectedDelivery,
+      notes,
+      status,
+      items = [],
+    } = req.body
+
+    const totalAmount = items.reduce(
+      (sum, item) =>
+        sum +
+        Number(item.quantity) *
+        Number(item.unitPrice),
+      0
+    )
+
+    // Update Purchase Order
+    await order.update(
+      {
+        vendorId,
+        expectedDelivery,
+        notes,
+        status,
+        totalAmount,
+      },
+      {
+        transaction: t,
+      }
+    )
+
+    // Remove old items
+    await PurchaseOrderItem.destroy({
+      where: {
+        purchaseOrderId: order.id,
+      },
+      transaction: t,
+    })
+
+    // Insert new items
+    if (items.length) {
+      await PurchaseOrderItem.bulkCreate(
+        items.map(item => ({
+          purchaseOrderId: order.id,
+          name: item.name,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          total:
+            Number(item.quantity) *
+            Number(item.unitPrice),
+        })),
+        {
+          transaction: t,
+        }
+      )
+    }
+
+    await t.commit()
+
+    await order.reload({
+      include: [
+        {
+          model: Vendor,
+          as: 'vendor',
+        },
+        {
+          model: PurchaseOrderItem,
+          as: 'items',
+        },
+      ],
+    })
+
+    res.json({
+      message: 'Purchase Order updated successfully',
+      order,
+    })
+  } catch (err) {
+    await t.rollback()
+    next(err)
+  }
+})
+
 router.patch('/vendors/:id', protect, async (req, res, next) => {
   try {
     const vendor = await Vendor.findByPk(req.params.id)
@@ -70,10 +174,27 @@ router.post('/orders', protect, async (req, res, next) => {
     const company = getCompany(req)
     const { items = [], ...orderData } = req.body
 
-    const count = await PurchaseOrder.count({ where: { companyId: company } })
-    const poNumber = `PO-${String(count + 1).padStart(5, '0')}`
+console.log("=================================");
+console.log("Order ID:", req.params.id);
+console.log("Company Header:", getCompany(req));
+console.log("=================================");
+    const lastPO = await PurchaseOrder.findOne({
+      where: { companyId: company },
+      order: [['createdAt', 'DESC']]
+    });
+
+    let poNumber = 'PO-00001';
+
+    console.log("last PO " + lastPO);
+
+    if (lastPO) {
+      const lastNumber = parseInt(lastPO.poNumber.replace('PO-', ''), 10);
+      poNumber = `PO-${String(lastNumber + 1).padStart(5, '0')}`;
+    }
 
     const total = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0)
+
+    console.log("ponumber " + poNumber);
 
     const order = await PurchaseOrder.create(
       { ...orderData, companyId: company, poNumber, totalAmount: total, createdById: req.user.id },

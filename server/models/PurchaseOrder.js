@@ -6,7 +6,7 @@ class PurchaseOrder extends Model {}
 PurchaseOrder.init({
   id:               { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
   companyId:        { type: DataTypes.UUID, allowNull: true },
-  poNumber:         { type: DataTypes.STRING, allowNull: false, unique: true },
+  poNumber:         { type: DataTypes.STRING, allowNull: false, unique: false },
   vendorId:         { type: DataTypes.UUID, allowNull: false },
   totalAmount:      { type: DataTypes.FLOAT, defaultValue: 0 },
   status: {

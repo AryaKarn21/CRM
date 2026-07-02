@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2 } from 'lucide-react'
@@ -40,7 +41,7 @@ export default function PurchaseOrders() {
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
   const watchedItems = watch('items')
   const totalAmount = watchedItems?.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0) || 0
-
+  const navigate = useNavigate()
   // Vendor form
   const { register: regV, handleSubmit: hV, reset: resetV, formState: { errors: errV } } = useForm()
 
@@ -92,24 +93,61 @@ export default function PurchaseOrders() {
     { key: 'totalAmount', label: 'Total', sortable: true, render: (val) => <span className="font-semibold">{formatCurrency(val)}</span> },
     { key: 'status', label: 'Status', render: (val) => <Badge variant={classifyStatus(val)} dot>{val}</Badge> },
     {
-      key: 'id', label: 'Actions',
+      key: 'id',
+      label: 'Actions',
       render: (id, row) => (
-        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+        <div
+          className="flex items-center gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="btn btn-sm btn-secondary"
+            onClick={() => navigate(`/procurement/orders/${id}`)}
+          >
+            View
+          </button>
+
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={() => navigate(`/procurement/orders/${id}/edit`)}
+          >
+            Edit
+          </button>
+
           {row.status === 'pending' && (
-            <button className="btn btn-sm btn-ghost" style={{ color: 'var(--success)' }}
-              onClick={() => approveMutation.mutate(id)} disabled={approveMutation.isPending}>
+            <button
+              className="btn btn-sm btn-ghost"
+              style={{ color: 'var(--success)' }}
+              onClick={() => approveMutation.mutate(id)}
+            >
               Approve
             </button>
           )}
+
+          {row.status === 'approved' && (
+            <button
+              className="btn btn-sm btn-ghost"
+              onClick={() => receiveMutation.mutate(id)}
+            >
+              Receive
+            </button>
+          )}
+
           {['draft', 'pending'].includes(row.status) && (
-            <button className="btn btn-sm btn-ghost text-red-500"
-              onClick={() => { if (confirm('Cancel this PO?')) cancelMutation.mutate(id) }}>
+            <button
+              className="btn btn-sm btn-ghost text-red-500"
+              onClick={() => {
+                if (confirm('Cancel this Purchase Order?')) {
+                  cancelMutation.mutate(id)
+                }
+              }}
+            >
               Cancel
             </button>
           )}
         </div>
       ),
-    },
+    }
   ]
 
   return (
@@ -184,8 +222,8 @@ export default function PurchaseOrders() {
               )}
             </div>
             <div className="form-group">
-              <label className="form-label">Expected Delivery</label>
-              <input className="input" type="date" {...register('expectedDelivery')} />
+              <label className="form-label">Expected Delivery *</label>
+              <input className="input" type="date" {...register('expectedDelivery', { required: 'Expected Delivery is required' })} />
             </div>
           </div>
 
