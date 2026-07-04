@@ -71,7 +71,12 @@ router.post('/', protect, async (req, res, next) => {
     }
     await lead.reload({ include: [{ model: User, as: 'assignedTo', attributes: ['id', 'name', 'email'] }] })
     res.status(201).json(lead)
-  } catch (err) { next(err) }
+  } catch (err) {
+    console.error(err);
+    console.error(err.message);
+    console.error(err.errors);
+    next(err)
+  }
 })
 
 // PATCH /api/leads/:id

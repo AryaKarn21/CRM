@@ -58,7 +58,7 @@ export default function LeadDetail() {
   }
 
   if (!lead) return null
-
+  console.log(JSON.stringify(lead, null, 2))
   const TABS = [
     { key: 'overview', label: 'Overview' },
     { key: 'activity', label: 'Activity' },
@@ -77,7 +77,7 @@ export default function LeadDetail() {
               {lead.name}
             </h1>
             <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-              {lead.company || 'No company'}
+              {lead.company_name || 'No company'}
             </p>
           </div>
           <Badge variant={classifyStatus(lead.stage)} dot>{lead.stage}</Badge>
@@ -108,7 +108,12 @@ export default function LeadDetail() {
                 <div className="grid sm:grid-cols-2 gap-5">
                   <Field label="Email" value={lead.email} icon={<Mail size={13} />} />
                   <Field label="Phone" value={lead.phone} icon={<Phone size={13} />} />
-                  <Field label="Company" value={lead.company} icon={<Building2 size={13} />} />
+                  <Field
+                    label="Company"
+                    value={lead.company_name || '—'}
+                    icon={<Building2 size={13} />}
+                  />
+
                   <Field
                     label="Lead Value"
                     value={formatCurrency(lead.value)}
@@ -222,4 +227,4 @@ function Field({ label, value, icon }) {
       </p>
     </div>
   )
-}
+}     

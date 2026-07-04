@@ -10,6 +10,7 @@ import FilterBar from '@/components/shared/FilterBar'
 import FormModal from '@/components/shared/FormModal'
 import { formatDate, formatCurrency, classifyStatus } from '@/lib/utils'
 import { LEAD_STAGES } from '@/lib/constants'
+import { settingsAPI } from '@/api/settings.api'
 import toast from 'react-hot-toast'
 
 const LEAD_SOURCES = ['Website', 'Referral', 'Social Media', 'Email', 'Cold Call', 'Advertisement', 'Other']
@@ -26,7 +27,12 @@ export default function LeadsList() {
     queryKey: ['leads', params],
     queryFn: () => leadsAPI.getAll(params).then(r => r.data),
   })
+  const { data: usersData } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => settingsAPI.getUsers().then(res => res.data),
+  })
 
+  const users = usersData?.users || usersData || []
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
     defaultValues: { name: '', email: '', phone: '', company_name: '', stage: 'New', value: 0, source: '', notes: '' }
   })
@@ -40,7 +46,11 @@ export default function LeadsList() {
       toast.success('Lead created successfully')
     },
     onError: (err) => {
-      toast.error(err?.response?.data?.message || 'Failed to create lead')
+      console.log('Axios Error:', err);
+      console.log('Response:', err.response);
+      console.log('Response Data:', err.response?.data);
+
+      toast.error(err?.response?.data?.message || 'Failed to create lead');
     }
   })
 
@@ -81,7 +91,7 @@ export default function LeadsList() {
       render: (val) => formatDate(val),
     },
     {
-      key: '_id', label: '',
+      key: 'id', label: '',
       render: (id) => (
         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
           <button className="btn btn-ghost btn-sm"
@@ -113,6 +123,26 @@ export default function LeadsList() {
             <Plus size={14} /> Add Lead
           </button>
         </div>
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Assigned To</label>
+
+        <select
+          className="input"
+          {...register('assignedToId')}
+        >
+          <option value="">Select User</option>
+
+          {users.map(user => (
+            <option
+              key={user.id}
+              value={user.id}
+            >
+              {user.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <FilterBar
@@ -148,10 +178,14 @@ export default function LeadsList() {
         open={modalOpen}
         onClose={() => { setModalOpen(false); reset() }}
         title="Add New Lead"
-        onSubmit={handleSubmit((d) => createMutation.mutate({
-          ...d,
-          value: Number(d.value) || 0,
-        }))}
+        onSubmit={handleSubmit((d) => {
+          console.log('Form Data:', d);
+          createMutation.mutate({
+            ...d,
+            value: Number(d.value) || 0,
+            assignedToId: d.assignedToId || null,
+          });
+        })}
         loading={createMutation.isPending}
         submitLabel="Create Lead"
         size="lg"
@@ -178,6 +212,25 @@ export default function LeadsList() {
               <label className="form-label">Phone</label>
               <input className="input" placeholder="+977 98XXXXXXXX"
                 {...register('phone')} />
+            </div>
+            <div className="form-group">
+              <label>Assigned To</label>
+
+              <select
+                className="input"
+                {...register('assignedToId')}
+              >
+                <option value="">Select User</option>
+
+                {users.map(user => (
+                  <option
+                    key={user.id}
+                    value={user.id}
+                  >
+                    {user.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
               <label className="form-label">Stage</label>

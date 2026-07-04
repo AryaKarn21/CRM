@@ -62,7 +62,10 @@ Opportunity.belongsTo(Account, { as: 'account', foreignKey: 'accountId' })
 Opportunity.belongsTo(User, { as: 'assignedTo', foreignKey: 'assignedToId' })
 
 // ── Lead ──────────────────────────────────────────────────
-Lead.belongsTo(Company, { foreignKey: 'companyId' })
+Lead.belongsTo(Company, {
+  as: 'company',
+  foreignKey: 'companyId'
+})
 Lead.belongsTo(User, { as: 'assignedTo', foreignKey: 'assignedToId' })
 Lead.belongsTo(Account, { as: 'convertedAccount', foreignKey: 'convertedAccountId' })
 Lead.belongsTo(Contact, { as: 'convertedContact', foreignKey: 'convertedContactId' })

@@ -6,10 +6,18 @@ const COLORS = [
 ]
 
 function colorFromStr(str = '') {
-  const i = str.charCodeAt(0) % COLORS.length
-  return COLORS[i]
-}
+  if (!str || typeof str !== 'string') {
+    return COLORS[0]
+  }
 
+  const code = str.charCodeAt(0)
+
+  if (Number.isNaN(code)) {
+    return COLORS[0]
+  }
+
+  return COLORS[code % COLORS.length]
+}
 export default function Avatar({ name = '', src, size = 'md', className }) {
   const [bg, text] = colorFromStr(name)
   const sizes = { xs: 'w-6 h-6 text-[10px]', sm: 'w-8 h-8 text-xs', md: 'w-9 h-9 text-xs', lg: 'w-11 h-11 text-sm', xl: 'w-14 h-14 text-base' }
