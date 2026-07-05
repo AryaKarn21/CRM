@@ -37,7 +37,19 @@ export default function SupportDetail() {
       count: ticket.replies?.length || 0,
     },
   ]
+  const deleteMutation = useMutation({
+    mutationFn: supportAPI.deleteTicket,
 
+    onSuccess: () => {
+      toast.success('Ticket deleted')
+
+      queryClient.invalidateQueries({
+        queryKey: ['tickets'],
+      })
+
+      navigate('/support')
+    },
+  })
   return (
     <div className="animate-fade-in">
 
@@ -49,7 +61,7 @@ export default function SupportDetail() {
             className="btn btn-ghost btn-icon"
             onClick={() => navigate('/support')}
           >
-            <ArrowLeft size={16}/>
+            <ArrowLeft size={16} />
           </button>
 
           <div>

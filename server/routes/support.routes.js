@@ -62,13 +62,24 @@ router.post('/', protect, async (req, res, next) => {
 router.patch('/:id', protect, async (req, res, next) => {
   try {
     const ticket = await Ticket.findByPk(req.params.id)
-    if (!ticket) return res.status(404).json({ message: 'Ticket not found' })
+
+    if (!ticket)
+      return res.status(404).json({ message: 'Ticket not found' })
+
     const updates = { ...req.body }
-    if (updates.status === 'Resolved' && ticket.status !== 'Resolved') updates.resolvedAt = new Date()
-    if (updates.status === 'Closed' && ticket.status !== 'Closed') updates.closedAt = new Date()
+
+    if (updates.status === 'Resolved' && ticket.status !== 'Resolved')
+      updates.resolvedAt = new Date()
+
+    if (updates.status === 'Closed' && ticket.status !== 'Closed')
+      updates.closedAt = new Date()
+
     await ticket.update(updates)
+
     res.json(ticket)
-  } catch (err) { next(err) }
+  } catch (err) {
+    next(err)
+  }
 })
 
 router.post('/:id/replies', protect, async (req, res, next) => {

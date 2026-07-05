@@ -5,10 +5,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
-
 import { supportAPI } from '@/api/support.api'
 import { ticketSchema } from '@/lib/validations'
 import { PRIORITY_LEVELS, TICKET_STATUS } from '@/lib/constants'
+import { settingsAPI } from '@/api/settings.api'
 
 export default function SupportEdit() {
   const { id } = useParams()
@@ -24,10 +24,27 @@ export default function SupportEdit() {
     resolver: zodResolver(ticketSchema),
   })
 
-  const { data: ticket, isLoading } = useQuery({
-    queryKey: ['ticket', id],
-    queryFn: () => supportAPI.getTicketById(id).then(res => res.data),
-  })
+  const { data: usersData } = useQuery({
+  queryKey: ['users'],
+  queryFn: () => settingsAPI.getUsers().then(res => res.data),
+})
+
+const { data: usersData, isLoading: usersLoading } = useQuery({
+  queryKey: ['users'],
+  queryFn: () =>
+    settingsAPI.getUsers({
+      page: 1,
+      limit: 1000,
+    }).then((res) => res.data),
+})
+const {
+  data: ticket,
+  isLoading,
+} = useQuery({
+  queryKey: ['ticket', id],
+  queryFn: () =>
+    supportAPI.getTicketById(id).then((res) => res.data),
+})
 
   useEffect(() => {
     if (ticket) {
@@ -37,31 +54,26 @@ export default function SupportEdit() {
         priority: ticket.priority,
         category: ticket.category,
         status: ticket.status,
+        assignedToId: ticket.assignedToId || '',
       })
     }
   }, [ticket, reset])
 
   const updateMutation = useMutation({
-    mutationFn: (data) => supportAPI.updateTicket(id, data),
+  mutationFn: (data) => {
+    console.log("Sending to backend:", data)
+    return supportAPI.updateTicket(id, data)
+  },
 
-    onSuccess: () => {
-      toast.success('Ticket updated successfully')
+  onSuccess: () => {
+    toast.success("Ticket updated successfully")
+    queryClient.invalidateQueries({ queryKey: ['tickets'] })
+    queryClient.invalidateQueries({ queryKey: ['ticket', id] })
+    navigate(`/support/${id}`)
+  },
+})
 
-      queryClient.invalidateQueries({
-        queryKey: ['tickets'],
-      })
-
-      queryClient.invalidateQueries({
-        queryKey: ['ticket', id],
-      })
-
-      navigate(`/support/${id}`)
-    },
-  })
-
-  if (isLoading) {
-    return <div className="p-6">Loading...</div>
-  }
+ 
 
   return (
     <div className="animate-fade-in">
@@ -94,9 +106,13 @@ export default function SupportEdit() {
       <div className="card p-6 mx-6">
 
         <form
-          className="flex flex-col gap-5"
-          onSubmit={handleSubmit((data) => updateMutation.mutate(data))}
-        >
+  className="flex flex-col gap-5"
+  onSubmit={handleSubmit((data) => {
+    console.log("Submitting Ticket:", data)
+    updateMutation.mutate(data)
+  })}
+>
+        
 
           <div className="form-group">
             <label className="form-label">
@@ -206,6 +222,30 @@ export default function SupportEdit() {
               <option value="Other">Other</option>
             </select>
           </div>
+
+          <div className="form-group">
+  <label className="form-label">
+    Assigned To
+  </label>
+
+  <select
+    className="input"
+    {...register('assignedToId')}
+  >
+    <option value="">
+      Unassigned
+    </option>
+
+    {usersData?.users?.map((user) => (
+      <option
+        key={user.id}
+        value={user.id}
+      >
+        {user.name}
+      </option>
+    ))}
+  </select>
+</div>
 
           <div className="flex justify-end gap-3">
 

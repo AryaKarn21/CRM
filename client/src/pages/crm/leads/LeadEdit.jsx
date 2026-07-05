@@ -43,14 +43,6 @@ export default function LeadEdit() {
 
     const users = usersData?.users || usersData || []
 
-    // Load companies
-    const { data: companiesData } = useQuery({
-        queryKey: ['companies'],
-        queryFn: () => settingsAPI.getCompanies().then(res => res.data),
-    })
-
-    const companies = companiesData?.companies || companiesData || []
-
     // Fill form when lead is loaded
     useEffect(() => {
         if (!lead) return
@@ -59,11 +51,7 @@ export default function LeadEdit() {
             name: lead.name || '',
             email: lead.email || '',
             phone: lead.phone || '',
-            companyId:
-                lead.company?.id ||
-                lead.Company?.id ||
-                lead.companyId ||
-                '',
+            company_name: lead.company_name || '',
             stage: lead.stage || 'New',
             value: lead.value || 0,
             source: lead.source || '',
@@ -78,7 +66,7 @@ export default function LeadEdit() {
             leadsAPI.update(id, {
                 ...data,
                 value: Number(data.value),
-                companyId: data.companyId || null,
+                company_name: data.company_name || '',
                 assignedToId: data.assignedToId || null,
             }),
 
@@ -236,23 +224,11 @@ export default function LeadEdit() {
                     <div className="form-group col-span-2">
                         <label>Company</label>
 
-                        <select
+                        <input
                             className="input"
-                            {...register('companyId')}
-                        >
-                            <option value="">
-                                Select Company
-                            </option>
-
-                            {companies.map(company => (
-                                <option
-                                    key={company.id}
-                                    value={company.id}
-                                >
-                                    {company.name}
-                                </option>
-                            ))}
-                        </select>
+                            placeholder="Company name"
+                            {...register('company_name')}
+                        />
                     </div>
 
                     <div className="form-group col-span-2">

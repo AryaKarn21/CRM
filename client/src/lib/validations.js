@@ -73,10 +73,11 @@ export const ticketSchema = z.object({
   subject: z.string().min(3, 'Subject is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   priority: z.string().min(1, 'Priority is required'),
+  status: z.string().optional(),
   category: z.string().optional(),
-  assignedTo: z.string().optional(),
-})
 
+  assignedToId: z.string().optional(),
+})
 export const projectSchema = z.object({
   name: z.string().min(2, 'Project name is required'),
   description: z.string().optional(),

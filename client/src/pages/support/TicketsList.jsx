@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { supportAPI } from '@/api/support.api'
+import { settingsAPI } from '@/api/settings.api'
 import DataTable from '@/components/shared/DataTable'
 import FilterBar from '@/components/shared/FilterBar'
 import Badge from '@/components/ui/Badge'
@@ -26,11 +27,36 @@ export default function TicketsList() {
     queryFn: () => supportAPI.getTickets(params).then(r => r.data),
   })
 
+  const { data: usersData } = useQuery({
+    queryKey: ['users'],
+    queryFn: () =>
+      settingsAPI.getUsers({
+        page: 1,
+        limit: 1000,
+      }).then((res) => res.data),
+  })
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm({ resolver: zodResolver(ticketSchema) })
 
   const createMutation = useMutation({
     mutationFn: supportAPI.createTicket,
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tickets'] }); setModalOpen(false); reset(); toast.success('Ticket created') },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: supportAPI.deleteTicket,
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['tickets'],
+      })
+
+      toast.success('Ticket deleted successfully')
+    },
+
+    onError: () => {
+      toast.error('Failed to delete ticket')
+    },
   })
 
   const priorityColors = { Low: 'gray', Medium: 'info', High: 'warning', Urgent: 'danger' }
@@ -69,10 +95,34 @@ export default function TicketsList() {
     { key: 'createdAt', label: 'Created', sortable: true, render: (val) => formatDate(val) },
     { key: 'updatedAt', label: 'Updated', render: (val) => formatDate(val) },
     {
-      key: '_id', label: '',
+      key: 'id',
+      label: 'Actions',
       render: (id) => (
-        <div onClick={e => e.stopPropagation()}>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/support/${id}`)}>View</button>
+        <div
+          className="flex gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => navigate(`/support/${id}`)}
+          >
+            View
+          </button>
+
+          <button
+            className="btn btn-danger btn-sm"
+            onClick={() => {
+              if (
+                window.confirm(
+                  'Are you sure you want to delete this ticket?'
+                )
+              ) {
+                deleteMutation.mutate(id)
+              }
+            }}
+          >
+            Delete
+          </button>
         </div>
       ),
     },
@@ -118,7 +168,10 @@ export default function TicketsList() {
         open={modalOpen}
         onClose={() => { setModalOpen(false); reset() }}
         title="Create Support Ticket"
-        onSubmit={handleSubmit((d) => createMutation.mutate(d))}
+        onSubmit={handleSubmit((d) => {
+          console.log("Create Ticket Data:", d)
+          createMutation.mutate(d)
+        })}
         loading={createMutation.isPending}
         submitLabel="Create Ticket"
       >
@@ -144,14 +197,39 @@ export default function TicketsList() {
             </div>
             <div className="form-group">
               <label className="form-label">Category</label>
+
               <select className="input" {...register('category')}>
                 <option value="">Select category</option>
                 {['Technical', 'Billing', 'Account', 'Feature Request', 'Other'].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">
+                Assigned To
+              </label>
+
+              <select
+                className="input"
+                {...register('assignedToId')}
+              >
+                <option value="">
+                  Select User
+                </option>
+
+                {(usersData?.users || []).map((user) => (
+                  <option
+                    key={user.id}
+                    value={user.id}
+                  >
+                    {user.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
         </div>
       </FormModal>
     </div>
+
   )
 }
