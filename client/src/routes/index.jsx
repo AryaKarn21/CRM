@@ -15,6 +15,7 @@ const LeadDetail = lazy(() => import('@/pages/crm/leads/LeadDetail'))
 const LeadKanban = lazy(() => import('@/pages/crm/leads/LeadKanban'))
 const AccountsList = lazy(() => import('@/pages/crm/accounts/AccountsList'))
 const AccountDetail = lazy(() => import('@/pages/crm/accounts/AccountDetail'))
+const AccountEdit = lazy(() => import('@/pages/crm/accounts/AccountEdit'))
 const LeadEdit = lazy(() => import('@/pages/crm/leads/LeadEdit'))
 const ContactsList = lazy(() => import('@/pages/crm/contacts/ContactsList'))
 const OpportunitiesList = lazy(() => import('@/pages/crm/opportunities/OpportunitiesList'))
@@ -76,6 +77,8 @@ export const router = createBrowserRouter([
           { path: '/crm/leads/:id/edit', element: <S><LeadEdit /></S> },
           { path: '/crm/accounts', element: <S><AccountsList /></S> },
           { path: '/crm/accounts/:id', element: <S><AccountDetail /></S> },
+          { path: '/crm/accounts/:id/edit', element: <S><AccountEdit /></S> },
+
           { path: '/crm/contacts', element: <S><ContactsList /></S> },
           { path: '/crm/opportunities', element: <S><OpportunitiesList /></S> },
           { path: '/crm/opportunities/kanban', element: <S><OpportunityKanban /></S> },

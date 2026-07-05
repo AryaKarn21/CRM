@@ -24,27 +24,22 @@ export default function SupportEdit() {
     resolver: zodResolver(ticketSchema),
   })
 
-  const { data: usersData } = useQuery({
-  queryKey: ['users'],
-  queryFn: () => settingsAPI.getUsers().then(res => res.data),
-})
-
-const { data: usersData, isLoading: usersLoading } = useQuery({
-  queryKey: ['users'],
-  queryFn: () =>
-    settingsAPI.getUsers({
-      page: 1,
-      limit: 1000,
-    }).then((res) => res.data),
-})
-const {
-  data: ticket,
-  isLoading,
-} = useQuery({
-  queryKey: ['ticket', id],
-  queryFn: () =>
-    supportAPI.getTicketById(id).then((res) => res.data),
-})
+  const { data: usersData, isLoading: usersLoading } = useQuery({
+    queryKey: ['users'],
+    queryFn: () =>
+      settingsAPI.getUsers({
+        page: 1,
+        limit: 1000,
+      }).then((res) => res.data),
+  })
+  const {
+    data: ticket,
+    isLoading,
+  } = useQuery({
+    queryKey: ['ticket', id],
+    queryFn: () =>
+      supportAPI.getTicketById(id).then((res) => res.data),
+  })
 
   useEffect(() => {
     if (ticket) {
@@ -60,20 +55,20 @@ const {
   }, [ticket, reset])
 
   const updateMutation = useMutation({
-  mutationFn: (data) => {
-    console.log("Sending to backend:", data)
-    return supportAPI.updateTicket(id, data)
-  },
+    mutationFn: (data) => {
+      console.log("Sending to backend:", data)
+      return supportAPI.updateTicket(id, data)
+    },
 
-  onSuccess: () => {
-    toast.success("Ticket updated successfully")
-    queryClient.invalidateQueries({ queryKey: ['tickets'] })
-    queryClient.invalidateQueries({ queryKey: ['ticket', id] })
-    navigate(`/support/${id}`)
-  },
-})
+    onSuccess: () => {
+      toast.success("Ticket updated successfully")
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      queryClient.invalidateQueries({ queryKey: ['ticket', id] })
+      navigate(`/support/${id}`)
+    },
+  })
 
- 
+
 
   return (
     <div className="animate-fade-in">
@@ -106,13 +101,13 @@ const {
       <div className="card p-6 mx-6">
 
         <form
-  className="flex flex-col gap-5"
-  onSubmit={handleSubmit((data) => {
-    console.log("Submitting Ticket:", data)
-    updateMutation.mutate(data)
-  })}
->
-        
+          className="flex flex-col gap-5"
+          onSubmit={handleSubmit((data) => {
+            console.log("Submitting Ticket:", data)
+            updateMutation.mutate(data)
+          })}
+        >
+
 
           <div className="form-group">
             <label className="form-label">
@@ -224,28 +219,28 @@ const {
           </div>
 
           <div className="form-group">
-  <label className="form-label">
-    Assigned To
-  </label>
+            <label className="form-label">
+              Assigned To
+            </label>
 
-  <select
-    className="input"
-    {...register('assignedToId')}
-  >
-    <option value="">
-      Unassigned
-    </option>
+            <select
+              className="input"
+              {...register('assignedToId')}
+            >
+              <option value="">
+                Unassigned
+              </option>
 
-    {usersData?.users?.map((user) => (
-      <option
-        key={user.id}
-        value={user.id}
-      >
-        {user.name}
-      </option>
-    ))}
-  </select>
-</div>
+              {usersData?.users?.map((user) => (
+                <option
+                  key={user.id}
+                  value={user.id}
+                >
+                  {user.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="flex justify-end gap-3">
 

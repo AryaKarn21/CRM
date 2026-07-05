@@ -65,15 +65,41 @@ export default function AccountsList() {
     { key: 'type', label: 'Type', render: (val) => val ? <Badge variant="info">{val}</Badge> : '—' },
     { key: 'revenue', label: 'Revenue', sortable: true, render: (val) => val ? formatCurrency(val) : '—' },
     { key: 'createdAt', label: 'Added', sortable: true, render: (val) => formatDate(val) },
-    {
-      key: '_id', label: '',
-      render: (id, row) => (
-        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/crm/accounts/${id}`)}>View</button>
-          <button className="btn btn-ghost btn-sm text-red-500" onClick={() => { if (confirm('Delete?')) deleteMutation.mutate(id) }}>Delete</button>
-        </div>
-      ),
-    },
+       {
+  key: 'id',
+  label: 'Actions',
+  render: (id) => (
+    <div
+      className="flex items-center gap-2"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        className="btn btn-ghost btn-sm"
+        onClick={() => navigate(`/crm/accounts/${id}`)}
+      >
+        View
+      </button>
+
+      <button
+        className="btn btn-ghost btn-sm text-blue-600"
+        onClick={() => navigate(`/crm/accounts/${id}/edit`)}
+      >
+        Edit
+      </button>
+
+      <button
+        className="btn btn-ghost btn-sm text-red-500"
+        onClick={() => {
+          if (window.confirm('Delete this account?')) {
+            deleteMutation.mutate(id)
+          }
+        }}
+      >
+        Delete
+      </button>
+    </div>
+  ),
+},
   ]
 
   return (

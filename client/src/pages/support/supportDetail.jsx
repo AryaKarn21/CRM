@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 
 import { supportAPI } from '@/api/support.api'
@@ -20,6 +20,20 @@ export default function SupportDetail() {
     queryFn: () => supportAPI.getTicketById(id).then(res => res.data),
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: supportAPI.deleteTicket,
+
+    onSuccess: () => {
+      toast.success('Ticket deleted')
+
+      queryClient.invalidateQueries({
+        queryKey: ['tickets'],
+      })
+
+      navigate('/support')
+    },
+  })
+
   if (isLoading) {
     return <div className="p-6">Loading...</div>
   }
@@ -37,19 +51,7 @@ export default function SupportDetail() {
       count: ticket.replies?.length || 0,
     },
   ]
-  const deleteMutation = useMutation({
-    mutationFn: supportAPI.deleteTicket,
 
-    onSuccess: () => {
-      toast.success('Ticket deleted')
-
-      queryClient.invalidateQueries({
-        queryKey: ['tickets'],
-      })
-
-      navigate('/support')
-    },
-  })
   return (
     <div className="animate-fade-in">
 
