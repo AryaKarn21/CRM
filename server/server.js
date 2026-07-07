@@ -21,7 +21,7 @@ import projectsRoutes from './routes/projects.routes.js'
 import supportRoutes from './routes/support.routes.js'
 import reportsRoutes from './routes/reports.routes.js'
 import settingsRoutes from './routes/settings.routes.js'
-
+import rolesRoutes from './routes/roles.routes.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { protect } from './middleware/auth.js'
 import { resolveCompany } from './middleware/tenant.js'
@@ -55,7 +55,7 @@ app.use('/api/projects', protect, resolveCompany, projectsRoutes)
 app.use('/api/support', protect, resolveCompany, supportRoutes)
 app.use('/api/reports', protect, resolveCompany, reportsRoutes)
 app.use('/api/settings', protect, settingsRoutes)
-
+app.use('/api/roles', protect, resolveCompany ,rolesRoutes)
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
 
 app.use(errorHandler)
@@ -78,9 +78,12 @@ async function start() {
 
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
   } catch (err) {
-    console.error('Failed to start server:', err)
-    process.exit(1)
-  }
+  console.error("========== ERROR ==========");
+  console.error(err);
+  console.error(err.stack);
+  console.error("===========================");
+  process.exit(1);
+}
 }
 
 start()

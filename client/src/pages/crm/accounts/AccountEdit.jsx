@@ -132,6 +132,7 @@ export default function AccountEdit() {
             <form
                 className="card p-6 flex flex-col gap-5"
                 onSubmit={handleSubmit((data) =>
+                 
                     updateMutation.mutate(data)
                 )}
             >

@@ -20,12 +20,20 @@ export const leadSchema = z.object({
 export const accountSchema = z.object({
   name: z.string().min(2, 'Account name is required'),
   industry: z.string().optional(),
-  website: z.union([z.string().url('Invalid URL'), z.literal('')]).optional(),
+  website: z.union([
+    z.string().url('Invalid URL'),
+    z.literal('')
+  ]).optional(),
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal('')),
   address: z.string().optional(),
   type: z.string().optional(),
+
   revenue: z.coerce.number().min(0).optional(),
+
+  employees: z.coerce.number().nullable().optional(),
+
+  assignedToId: z.string().optional(),
 })
 
 export const contactSchema = z.object({

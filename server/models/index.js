@@ -35,6 +35,7 @@ import Task from './Task.js'
 import Ticket from './Ticket.js'
 import TicketReply from './TicketReply.js'
 import AuditLog from './AuditLog.js'
+import Role from './Role.js'
 
 // ── Company ───────────────────────────────────────────────
 Company.hasMany(Company, { as: 'children', foreignKey: 'parentId' })
@@ -44,7 +45,24 @@ Company.belongsTo(Company, { as: 'parent', foreignKey: 'parentId' })
 User.belongsToMany(Company, { through: UserCompany, foreignKey: 'userId', otherKey: 'companyId', as: 'companies' })
 Company.belongsToMany(User, { through: UserCompany, foreignKey: 'companyId', otherKey: 'userId', as: 'users' })
 User.belongsTo(Company, { as: 'company', foreignKey: 'companyId' }) // home company
+// ── Role ───────────────────────────────────────────────
 
+Role.belongsTo(Company, {
+  foreignKey: 'companyId',
+})
+
+Company.hasMany(Role, {
+  foreignKey: 'companyId',
+})
+
+Role.hasMany(User, {
+  foreignKey: 'roleId',
+})
+
+User.belongsTo(Role, {
+  as: 'roleInfo',
+  foreignKey: 'roleId',
+})
 // ── Account ───────────────────────────────────────────────
 Account.belongsTo(Company, { foreignKey: 'companyId' })
 Account.belongsTo(User, { as: 'assignedTo', foreignKey: 'assignedToId' })
@@ -156,7 +174,7 @@ AuditLog.belongsTo(User, { as: 'user', foreignKey: 'userId' })
 import { withMongoCompatJSON } from './mongoCompat.js'
 
 const allModels = [
-  Company, User, UserCompany, Account, Contact, Opportunity, Lead, LeadNote,
+  Company, User, UserCompany,Role, Account, Contact, Opportunity, Lead, LeadNote,
   Employee, EmployeeDocument, Attendance, Leave, LeaveType, PayrollRun, Payslip,
   Expense, LedgerEntry, Warehouse, InventoryItem, Asset, Vendor, PurchaseOrder,
   PurchaseOrderItem, Project, ProjectMember, Task, Ticket, TicketReply, AuditLog,
@@ -164,7 +182,7 @@ const allModels = [
 allModels.forEach(withMongoCompatJSON)
 
 export {
-  Company, User, UserCompany, Account, Contact, Opportunity, Lead, LeadNote,
+  Company, User, UserCompany,Role, Account, Contact, Opportunity, Lead, LeadNote,
   Employee, EmployeeDocument, Attendance, Leave, LeaveType, PayrollRun, Payslip,
   Expense, LedgerEntry, Warehouse, InventoryItem, Asset, Vendor, PurchaseOrder,
   PurchaseOrderItem, Project, ProjectMember, Task, Ticket, TicketReply, AuditLog,

@@ -13,6 +13,7 @@ import toast from 'react-hot-toast'
 import { useEffect } from 'react'
 //import CompanyTable from '@/components/settings/CompanyTable'
 import { useAuthStore } from '@/store/auth.store'
+import { rolesAPI } from '@/api/roles.api'
 import { authAPI } from '@/api/auth.api'
 const TABS = [
   { key: 'company', label: 'Company' },
@@ -90,6 +91,7 @@ function CompanyTab() {
     queryFn: () => settingsAPI.getCompanies().then((res) => res.data),
   })
 
+
   const deleteMutation = useMutation({
     mutationFn: (id) => settingsAPI.deleteCompany(id),
 
@@ -105,6 +107,10 @@ function CompanyTab() {
       toast.error('Unable to delete company')
     },
   })
+
+
+
+  
   const createMutation = useMutation({
     mutationFn: (data) => settingsAPI.addCompany(data),
     onSuccess: async () => {
@@ -741,6 +747,13 @@ function RolesTab() {
     queryFn: () => settingsAPI.getRoles().then(r => r.data),
   })
 
+  const { data: rolesData, isLoading: rolesLoading } = useQuery({
+  queryKey: ['roles'],
+  queryFn: () => rolesAPI.getAll().then(res => res.data),
+})
+
+const roles = rolesData?.roles || []
+
   if (isLoading) {
     return (
       <div className="h-40 animate-pulse rounded-lg" style={{ background: 'var(--border)' }} />
@@ -775,9 +788,50 @@ function RolesTab() {
           </div>
         </div>
       )) || (
-          <div className="text-center py-10 text-[13px]" style={{ color: 'var(--text-muted)' }}>
-            No roles configured
-          </div>
+         <div className="space-y-3">
+
+  {rolesLoading && (
+    <p>Loading roles...</p>
+  )}
+
+  {!rolesLoading && roles.length === 0 && (
+    <p className="text-center text-gray-500 py-10">
+      No roles configured
+    </p>
+  )}
+
+  {!rolesLoading &&
+    roles.map((role) => (
+      <div
+        key={role.id}
+        className="flex items-center justify-between border rounded-lg p-4"
+      >
+        <div>
+          <h3 className="font-semibold">
+            {role.name}
+          </h3>
+
+          <p className="text-sm text-gray-500">
+            {role.description}
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+
+          <button className="btn btn-secondary btn-sm">
+            Edit
+          </button>
+
+          <button className="btn btn-danger btn-sm">
+            Delete
+          </button>
+
+        </div>
+
+      </div>
+    ))}
+
+</div>
         )}
     </div>
   )
