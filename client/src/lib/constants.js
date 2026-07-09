@@ -39,3 +39,25 @@ export const ROLES = {
 }
 
 export const CURRENCIES = ['NPR', 'USD', 'EUR', 'GBP', 'INR']
+
+//PERMISSIONS object that maps feature names to permission keys. This becomes the single source of truth for both frontend and backend
+export const PERMISSIONS = {
+  // CRM
+  VIEW_LEADS:         'crm.leads.view',
+  CREATE_LEADS:       'crm.leads.create',
+  DELETE_LEADS:       'crm.leads.delete',
+  VIEW_OPPORTUNITIES: 'crm.opportunities.view',
+
+  // HR
+  VIEW_EMPLOYEES:     'hr.employees.view',
+  VIEW_PAYROLL:       'hr.payroll.view',
+  MANAGE_LEAVES:      'hr.leaves.manage',
+
+  // Finance
+  VIEW_FINANCE:       'finance.view',
+  VIEW_LEDGER:        'finance.ledger.view',
+
+  // Admin
+  MANAGE_USERS:       'settings.users.manage',
+  MANAGE_ROLES:       'settings.roles.manage',
+}

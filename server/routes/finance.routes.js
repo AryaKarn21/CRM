@@ -2,12 +2,13 @@ import express from 'express'
 import { Op, fn, col } from 'sequelize'
 import { Expense, LedgerEntry, User } from '../models/index.js'
 import { protect } from '../middleware/auth.js'
+import { requirePermission } from '../middleware/permission.js'
 
 const router = express.Router()
 const getCompany = (req) => req.headers['x-company-id'] || null
 
 // ── Expenses ──────────────────────────────────────────────
-router.get('/expenses', protect, async (req, res, next) => {
+router.get('/expenses', protect, requirePermission('finance.view'), async (req, res, next) => {
   try {
     const company = getCompany(req)
     const { page = 1, limit = 20, status, category } = req.query
@@ -26,14 +27,14 @@ router.get('/expenses', protect, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-router.post('/expenses', protect, async (req, res, next) => {
+router.post('/expenses', protect, requirePermission('finance.view'), async (req, res, next) => {
   try {
     const expense = await Expense.create({ ...req.body, companyId: getCompany(req), submittedById: req.user.id })
     res.status(201).json(expense)
   } catch (err) { next(err) }
 })
 
-router.patch('/expenses/:id/approve', protect, async (req, res, next) => {
+router.patch('/expenses/:id/approve', protect, requirePermission('finance.view'), async (req, res, next) => {
   try {
     const expense = await Expense.findByPk(req.params.id)
     if (!expense) return res.status(404).json({ message: 'Expense not found' })
@@ -42,7 +43,7 @@ router.patch('/expenses/:id/approve', protect, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-router.patch('/expenses/:id/reject', protect, async (req, res, next) => {
+router.patch('/expenses/:id/reject', protect, requirePermission('finance.view'), async (req, res, next) => {
   try {
     const expense = await Expense.findByPk(req.params.id)
     if (!expense) return res.status(404).json({ message: 'Expense not found' })
@@ -51,7 +52,7 @@ router.patch('/expenses/:id/reject', protect, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-router.delete('/expenses/:id', protect, async (req, res, next) => {
+router.delete('/expenses/:id', protect, requirePermission('finance.view'), async (req, res, next) => {
   try {
     await Expense.destroy({ where: { id: req.params.id } })
     res.json({ message: 'Expense deleted' })
@@ -59,7 +60,7 @@ router.delete('/expenses/:id', protect, async (req, res, next) => {
 })
 
 // ── Ledger ────────────────────────────────────────────────
-router.get('/ledger', protect, async (req, res, next) => {
+router.get('/ledger', protect, requirePermission('finance.ledger.view'), async (req, res, next) => {
   try {
     const company = getCompany(req)
     const { startDate, endDate } = req.query
@@ -74,13 +75,13 @@ router.get('/ledger', protect, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-router.post('/ledger', protect, async (req, res, next) => {
+router.post('/ledger', protect, requirePermission('finance.ledger.view'), async (req, res, next) => {
   try {
     const entry = await LedgerEntry.create({ ...req.body, companyId: getCompany(req), createdById: req.user.id })
     res.status(201).json(entry)
   } catch (err) { next(err) }
 })
-  
+
 
 
 // ── Summary ───────────────────────────────────────────────
@@ -132,7 +133,7 @@ router.get('/reports/revenue-by-month', protect, async (req, res, next) => {
 
   }
 
-  catch(err){
+  catch (err) {
 
     next(err)
 
@@ -140,24 +141,24 @@ router.get('/reports/revenue-by-month', protect, async (req, res, next) => {
 
 })
 
-router.patch('/expenses/:id', protect, async (req,res,next)=>{
+router.patch('/expenses/:id', protect, async (req, res, next) => {
 
-try{
+  try {
 
-const expense=await Expense.findByPk(req.params.id)
+    const expense = await Expense.findByPk(req.params.id)
 
-if(!expense)
-return res.status(404).json({message:'Expense not found'})
+    if (!expense)
+      return res.status(404).json({ message: 'Expense not found' })
 
-await expense.update(req.body)
+    await expense.update(req.body)
 
-res.json(expense)
+    res.json(expense)
 
-}catch(err){
+  } catch (err) {
 
-next(err)
+    next(err)
 
-}
+  }
 
 })
 

@@ -23,19 +23,19 @@ const NAV = [
     ]
   },
   {
-  label: "Calendar & Meetings",
-  icon: Calendar,
-  children: [
-    {
-      label: "Calendar",
-      to: "/calendar",
-    },
-    {
-      label: "Meetings",
-      to: "/calendar/meetings",
-    },
-  ],
-},
+    label: "Calendar & Meetings",
+    icon: Calendar,
+    children: [
+      {
+        label: "Calendar",
+        to: "/calendar",
+      },
+      {
+        label: "Meetings",
+        to: "/calendar/meetings",
+      },
+    ],
+  },
   {
     label: 'Human Resources', icon: Users, children: [
       { label: 'Employees', to: '/hr/employees' },
@@ -45,7 +45,7 @@ const NAV = [
     ]
   },
   {
-    label: 'Finance', icon: DollarSign, children: [
+    label: 'Finance', icon: DollarSign, permission: 'finance.view', children: [
       { label: 'Overview', to: '/finance' },
       { label: 'Expenses', to: '/finance/expenses' },
       { label: 'General Ledger', to: '/finance/ledger' },
@@ -108,6 +108,17 @@ function NavGroup({ item, collapsed }) {
 export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useUIStore()
   const { user } = useAuthStore()
+  const { can, isSuperAdmin } = usePermission()
+
+  const visibleNav = NAV
+    .filter(item => !item.permission || isSuperAdmin || can(item.permission))
+    .map(item => ({
+      ...item,
+      children: item.children?.filter(
+        child => !child.permission || isSuperAdmin || can(child.permission)
+      )
+    }))
+
 
   return (
     <aside
@@ -141,7 +152,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-0.5 scrollbar-none">
-        {NAV.map((item) =>
+        {visibleNav.map((item) =>
           item.children ? (
             <NavGroup key={item.label} item={item} collapsed={sidebarCollapsed} />
           ) : (

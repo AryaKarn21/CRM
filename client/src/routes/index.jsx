@@ -3,6 +3,8 @@ import { lazy, Suspense } from "react";
 import ProtectedRoute from "./ProtectedRoute";
 import AppShell from "@/components/layout/AppShell";
 import Spinner from "@/components/ui/Spinner";
+import ProtectedRoute from '@/components/layout/ProtectedRoute'
+import { PERMISSIONS } from '@/lib/constants'
 // ── Eagerly loaded (always needed) ──────────────────────────
 import Login from "@/pages/auth/Login";
 import NotFound from "@/pages/errors/NotFound";

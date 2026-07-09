@@ -107,6 +107,13 @@ router.post("/login", async (req, res, next) => {
     await user.save();
 
     const token = signToken(user.id);
+
+    let permissions = {}
+    if (user.roleId) {
+      const role = await Role.findByPk(user.roleId)
+      permissions = role?.permissions || {}
+    }
+
     res.json({
       token,
       user: {
@@ -114,9 +121,11 @@ router.post("/login", async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        permissions: permissions,
       },
       companies: user.companies,
     });
+    
   } catch (err) {
     next(err);
   }
