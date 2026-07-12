@@ -8,7 +8,9 @@ import Login from "@/pages/auth/Login";
 import NotFound from "@/pages/errors/NotFound";
 import Unauthorized from "@/pages/errors/Unauthorized";
 //import Login from '@/pages/auth/Login'
-import Calendar from "@/pages/calendar/Calendar";
+
+//import Meetings from "@/pages/calendar/Meetings";
+
 // ── Lazy loaded (only when route is visited) ─────────────────
 const Dashboard = lazy(() => import("@/pages/dashboard/Dashboard"));
 const LeadsList = lazy(() => import("@/pages/crm/leads/LeadsList"));
@@ -49,6 +51,8 @@ const GeneralLedger = lazy(
   () => import("@/pages/finance/ledger/GeneralLedger"),
 );
 const ItemsList = lazy(() => import("@/pages/inventory/ItemsList"));
+const Warehouses = lazy(() => import("@/pages/inventory/Warehouses"));
+const Assets = lazy(() => import("@/pages/inventory/Assets"));
 const PurchaseOrders = lazy(() => import("@/pages/procurement/PurchaseOrders"));
 const PurchaseDetails = lazy(
   () => import("@/pages/procurement/PurchaseDetails"),
@@ -68,6 +72,7 @@ const Register = lazy(() => import("@/pages/auth/Register"));
 const VerifyOTP = lazy(() => import("@/pages/auth/VerifyOTP"));
 const ForgotPassword = lazy(() => import("@/pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/auth/ResetPassword"));
+const Calendar = lazy(() => import("@/pages/calendar/Calendar"));
 // ── Suspense wrapper ─────────────────────────────────────────
 function PageLoader() {
   return (
@@ -113,7 +118,11 @@ export const router = createBrowserRouter([
 
   {
     path: "/calendar",
-    element: <Calendar />,
+    element: (
+      <S>
+        <Calendar />
+      </S>
+    ),
   },
   {
     path: "/reset-password",
@@ -317,6 +326,23 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "/inventory/warehouses",
+            element: (
+              <S>
+                <Warehouses />
+              </S>
+            ),
+          },
+        {
+  path: "/inventory/assets",
+  element: (
+    <S>
+      <Assets />
+    </S>
+  ),
+},
+
+      {
             path: "/procurement",
             element: (
               <S>

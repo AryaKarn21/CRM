@@ -30,10 +30,7 @@ const NAV = [
       label: "Calendar",
       to: "/calendar",
     },
-    {
-      label: "Meetings",
-      to: "/calendar/meetings",
-    },
+    
   ],
 },
   {
@@ -51,7 +48,19 @@ const NAV = [
       { label: 'General Ledger', to: '/finance/ledger' },
     ]
   },
-  { label: 'Inventory', icon: Package, to: '/inventory' },
+ {
+  label: 'Inventory',
+  icon: Package,
+  children: [
+    { label: 'Items', to: '/inventory' },
+    { label: 'Warehouses', to: '/inventory/warehouses' },
+    { label: 'Assets', to: '/inventory/assets' },
+    { label: 'Stock Transfers', to: '/inventory/transfers' },
+    { label: 'Stock Adjustments', to: '/inventory/adjustments' },
+  ]
+},
+
+
   { label: 'Procurement', icon: ShoppingCart, to: '/procurement' },
   { label: 'Projects', icon: FolderKanban, to: '/projects' },
   { label: 'Support', icon: Headphones, to: '/support' },

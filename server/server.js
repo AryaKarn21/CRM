@@ -28,6 +28,7 @@ import { resolveCompany } from './middleware/tenant.js'
 import meetingsRoutes from "./routes/meetings.routes.js";
 import meetingAttendeeRoutes from "./routes/meetingAttendees.routes.js";
 dotenv.config()
+import usersRoutes from './routes/users.routes.js'
 
 const app = express()
 
@@ -35,8 +36,10 @@ app.use(cors())
 app.use(express.json())
 
 app.use('/api/auth', authRoutes)
-app.use('/api/meetings', meetingsRoutes)
-app.use("/api/meeting-attendees", meetingAttendeeRoutes)
+app.use('/api/users', protect, resolveCompany, usersRoutes);
+app.use('/api/meetings',protect, resolveCompany, meetingsRoutes)
+app.use("/api/meeting-attendees",protect, resolveCompany, meetingAttendeeRoutes)
+
 app.use('/api/leads', protect, resolveCompany, leadsRoutes)
 app.use('/api/accounts', protect, resolveCompany, accountsRoutes)
 app.use('/api/contacts', protect, resolveCompany, contactsRoutes)

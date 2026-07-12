@@ -8,7 +8,7 @@
 
 import Company from "./Company.js";
 import User from "./User.js";
-import Meeting from './Meeting.js'
+import Meeting from "./Meeting.js";
 import MeetingAttendee from "./MeetingAttendee.js";
 import UserCompany from "./UserCompany.js";
 import Account from "./Account.js";
@@ -28,6 +28,7 @@ import LedgerEntry from "./LedgerEntry.js";
 import Warehouse from "./Warehouse.js";
 import InventoryItem from "./InventoryItem.js";
 import Asset from "./Asset.js";
+import StockTransfer from "./StockTransfer.js";
 import Vendor from "./Vendor.js";
 import PurchaseOrder from "./PurchaseOrder.js";
 import PurchaseOrderItem from "./PurchaseOrderItem.js";
@@ -79,28 +80,25 @@ User.belongsTo(Role, {
 
 // Company → Meetings
 Company.hasMany(Meeting, {
-  foreignKey: 'companyId',
-  as: 'meetings',
-})
+  foreignKey: "companyId",
+  as: "meetings",
+});
 
 Meeting.belongsTo(Company, {
-  foreignKey: 'companyId',
-  as: 'company',
-})
+  foreignKey: "companyId",
+  as: "company",
+});
 
 // User → Organized Meetings
 User.hasMany(Meeting, {
-  foreignKey: 'organizerId',
-  as: 'organizedMeetings',
-})
+  foreignKey: "organizerId",
+  as: "organizedMeetings",
+});
 
 Meeting.belongsTo(User, {
-  foreignKey: 'organizerId',
-  as: 'organizer',
-})
-
-
-
+  foreignKey: "organizerId",
+  as: "organizer",
+});
 
 // ── Account ───────────────────────────────────────────────
 Account.belongsTo(Company, { foreignKey: "companyId" });
@@ -163,12 +161,12 @@ Meeting.hasMany(MeetingAttendee, {
 
 MeetingAttendee.belongsTo(Meeting, {
   foreignKey: "meetingId",
-  as:"meeting"
+  as: "meeting",
 });
 
 User.hasMany(MeetingAttendee, {
   foreignKey: "userId",
-   as:"meetingInvitations"
+  as: "meetingInvitations",
 });
 
 MeetingAttendee.belongsTo(User, {
@@ -210,8 +208,54 @@ InventoryItem.belongsTo(Warehouse, {
   as: "warehouse",
   foreignKey: "warehouseId",
 });
-Asset.belongsTo(Company, { foreignKey: "companyId" });
-Asset.belongsTo(Employee, { as: "assignedTo", foreignKey: "assignedToId" });
+Asset.belongsTo(Company, {
+  foreignKey: "companyId",
+});
+
+Asset.belongsTo(Employee, {
+  as: "assignedTo",
+  foreignKey: "assignedToId",
+});
+
+Asset.belongsTo(Warehouse, {
+  as: "warehouse",
+  foreignKey: "warehouseId",
+});
+
+Warehouse.hasMany(Asset, {
+  as: "assets",
+  foreignKey: "warehouseId",
+});
+
+
+StockTransfer.belongsTo(Company, {
+  foreignKey: "companyId",
+});
+
+StockTransfer.belongsTo(InventoryItem, {
+  as: "item",
+  foreignKey: "itemId",
+});
+
+StockTransfer.belongsTo(Warehouse, {
+  as: "fromWarehouse",
+  foreignKey: "fromWarehouseId",
+});
+
+StockTransfer.belongsTo(Warehouse, {
+  as: "toWarehouse",
+  foreignKey: "toWarehouseId",
+});
+
+StockTransfer.belongsTo(User, {
+  as: "createdBy",
+  foreignKey: "createdById",
+});
+
+InventoryItem.hasMany(StockTransfer, {
+  as: "transfers",
+  foreignKey: "itemId",
+});
 
 // ── Procurement ───────────────────────────────────────────
 Vendor.belongsTo(Company, { foreignKey: "companyId" });
@@ -265,7 +309,7 @@ const allModels = [
   LeadNote,
   Employee,
   Meeting,
-   MeetingAttendee,
+  MeetingAttendee,
   EmployeeDocument,
   Attendance,
   Leave,
@@ -277,6 +321,7 @@ const allModels = [
   Warehouse,
   InventoryItem,
   Asset,
+  StockTransfer,
   Vendor,
   PurchaseOrder,
   PurchaseOrderItem,
@@ -298,7 +343,7 @@ export {
   Role,
   Account,
   Meeting,
-   MeetingAttendee,
+  MeetingAttendee,
   Contact,
   Opportunity,
   Lead,
@@ -315,6 +360,7 @@ export {
   Warehouse,
   InventoryItem,
   Asset,
+  StockTransfer,
   Vendor,
   PurchaseOrder,
   PurchaseOrderItem,

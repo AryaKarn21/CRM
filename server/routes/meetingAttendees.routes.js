@@ -6,10 +6,7 @@ const router = express.Router();
 
 router.post("/:meetingId/attendees", protect, async (req, res) => {
   try {
-    console.log("BODY:", req.body);
-    console.log("PARAMS:", req.params);
-    console.log("CONTEXT:", req.context);
-
+   
     const { users } = req.body;
 
     if (!Array.isArray(users) || users.length === 0) {
@@ -22,7 +19,7 @@ router.post("/:meetingId/attendees", protect, async (req, res) => {
     const meeting = await Meeting.findOne({
       where: {
         id: req.params.meetingId,
-        companyId: req.context.companyId,
+        companyId: req.companyId,
         isDeleted: false,
       },
     });
@@ -35,6 +32,8 @@ router.post("/:meetingId/attendees", protect, async (req, res) => {
         message: "Meeting not found.",
       });
     }
+
+
 
     const attendees = [];
 
@@ -83,7 +82,7 @@ router.get("/:meetingId/attendees", protect, async (req, res) => {
     const meeting = await Meeting.findOne({
       where: {
         id: req.params.meetingId,
-        companyId: req.context.companyId,
+        companyId: req.companyId,
         isDeleted: false,
       },
     });
@@ -127,5 +126,18 @@ router.get("/:meetingId/attendees", protect, async (req, res) => {
   }
 });
 
+router.patch("/:meetingId/attendees/me", async (req, res, next) => {
+  const attendee = await MeetingAttendee.findOne({
+    where: { meetingId: req.params.meetingId, userId: req.user.id },
+  });
+  if (!attendee) return res.status(404).json({ success: false, message: "Invitation not found" });
+  await attendee.update({ status: req.body.status });
+  res.json({ success: true, data: attendee });
+});
+
+router.delete("/:meetingId/attendees/:userId", async (req, res, next) => {
+  await MeetingAttendee.destroy({ where: { meetingId: req.params.meetingId, userId: req.params.userId } });
+  res.json({ success: true });
+});
 
 export default router;

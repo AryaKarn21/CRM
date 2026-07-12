@@ -33,9 +33,10 @@ export const PRIORITY_LEVELS = ['Low', 'Medium', 'High', 'Urgent']
 
 export const ROLES = {
   SUPER_ADMIN: 'super_admin',
-  COMPANY_ADMIN: 'company_admin',
+  COMPANY_ADMIN: "admin",
   MANAGER: 'manager',
   EMPLOYEE: 'employee',
+  ACCOUNTANT: 'accountant',
 }
 
 export const CURRENCIES = ['NPR', 'USD', 'EUR', 'GBP', 'INR']

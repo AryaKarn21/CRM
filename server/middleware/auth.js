@@ -16,7 +16,8 @@ export const protect = async (req, res, next) => {
     });
     if (!user) return res.status(401).json({ message: "User not found" });
     if (!user.isActive)
-      return res.status(401).json({ message: "Account deactivated" });
+      return res.status(401).json({ message: "Account deactivated" })
+    ;
     //req.user = user
     //next()
     // Keep the full user object if you still need it

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -7,111 +7,221 @@ import interactionPlugin from "@fullcalendar/interaction";
 import listPlugin from "@fullcalendar/list";
 
 import { meetingsAPI } from "@/api/meetings.api";
-import { useAuthStore } from "@/store/auth.store";
-
+import MeetingForm from "./MeetingForm";
+import CalendarHeader from "./components/CalendarHeader.jsx";
+import CalendarStats from "./components/CalendarStats";
+import CalendarToolBar from "./components/CalendarToolBar"; // ← check this line exists
+import UpcomingMeetings from "./components/UpcomingMeetings";
+import "./styles/calendar.css";
+import MeetingDetails from "./MeetingDetails";
 export default function Calendar() {
   const [events, setEvents] = useState([]);
+  const calendarRef = useRef(null);
 
+  const [showMeetingForm, setShowMeetingForm] = useState(false);
+  const [showMeetingDetails, setShowMeetingDetails] = useState(false);
+
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedMeeting, setSelectedMeeting] = useState(null);
+
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
+  const [activeView, setActiveView] = useState("dayGridMonth");
   useEffect(() => {
     loadMeetings();
   }, []);
 
+  // Convert API meetings to FullCalendar events
+  const mapMeetingsToEvents = (meetings) => {
+    return meetings.map((meeting) => ({
+      id: meeting.id,
+      title: meeting.title,
+      start: meeting.startTime,
+      end: meeting.endTime,
+
+      backgroundColor:
+        meeting.priority === "high"
+          ? "#ef4444"
+          : meeting.priority === "medium"
+            ? "#f59e0b"
+            : "#22c55e",
+
+      borderColor:
+        meeting.priority === "high"
+          ? "#ef4444"
+          : meeting.priority === "medium"
+            ? "#f59e0b"
+            : "#22c55e",
+      classNames: [
+        meeting.priority === "high"
+          ? "priority-high"
+          : meeting.priority === "medium"
+            ? "priority-medium"
+            : "priority-low",
+      ],
+      extendedProps: {
+        description: meeting.description,
+        location: meeting.location,
+        meetingType: meeting.meetingType,
+        priority: meeting.priority,
+        status: meeting.status,
+      },
+    }));
+  };
+
   const loadMeetings = async () => {
     try {
-      console.log("Token:", useAuthStore.getState().token);
-      console.log("Company:", useAuthStore.getState().activeCompany);
+      setLoading(true);
+      setError(null);
+
       const response = await meetingsAPI.getMeetings();
 
-      const meetings = response.data.data;
-
-      const calendarEvents = meetings.map((meeting) => ({
-        id: meeting.id,
-        title: meeting.title,
-        start: meeting.startTime,
-        end: meeting.endTime,
-
-        backgroundColor:
-          meeting.priority === "high"
-            ? "#ef4444"
-            : meeting.priority === "medium"
-              ? "#f59e0b"
-              : "#22c55e",
-
-        borderColor:
-          meeting.priority === "high"
-            ? "#ef4444"
-            : meeting.priority === "medium"
-              ? "#f59e0b"
-              : "#22c55e",
-
-        extendedProps: {
-          description: meeting.description,
-          location: meeting.location,
-          meetingType: meeting.meetingType,
-          priority: meeting.priority,
-          status: meeting.status,
-        },
-      }));
-
-      setEvents(calendarEvents);
-    } catch (error) {
-      console.error("Failed to load meetings", error);
+      setEvents(mapMeetingsToEvents(response.data.data));
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load meetings.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  const upcomingMeetings = [...events]
+    .sort((a, b) => new Date(a.start) - new Date(b.start))
+    .slice(0, 5);
+
+  // Open Create Meeting Modal
   const handleDateClick = (info) => {
-    alert(`Selected Date: ${info.dateStr}`);
+    setSelectedDate(info.dateStr);
+    setShowMeetingForm(true);
+    setSelectedMeeting(null);
+    setShowMeetingForm(true);
   };
 
+  // Click existing meeting
   const handleEventClick = (info) => {
-    const meeting = info.event;
-
-    alert(`
-Meeting: ${meeting.title}
-
-Description:
-${meeting.extendedProps.description || "N/A"}
-
-Location:
-${meeting.extendedProps.location || "N/A"}
-
-Status:
-${meeting.extendedProps.status}
-
-Priority:
-${meeting.extendedProps.priority}
-`);
+    setSelectedMeeting(info.event);
+    setShowMeetingDetails(true);
   };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <h2 className="text-lg font-semibold">Loading Calendar...</h2>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-red-500">
+        <h2>{error}</h2>
+      </div>
+    );
+  }
+
+  const now = new Date();
+  const todayCount = events.filter(
+    (e) => new Date(e.start).toDateString() === now.toDateString(),
+  ).length;
+  const upcomingCount = events.filter((e) => new Date(e.start) > now).length;
+  const onlineCount = events.filter(
+    (e) =>
+      e.extendedProps?.meetingType && e.extendedProps.meetingType !== "offline",
+  ).length;
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Calendar & Meetings</h1>
-      </div>
+      {/* Page Heading */}
+      <CalendarHeader
+        onCreateMeeting={() => {
+          setSelectedDate(null);
+          setShowMeetingForm(true);
+        }}
+      />
 
-      <div className="bg-white rounded-xl shadow p-5">
-        <FullCalendar
-          plugins={[
-            dayGridPlugin,
-            timeGridPlugin,
-            interactionPlugin,
-            listPlugin,
-          ]}
-          initialView="dayGridMonth"
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
-          }}
-          selectable={true}
-          editable={true}
-          weekends={true}
-          height="80vh"
-          events={events}
-          dateClick={handleDateClick}
-          eventClick={handleEventClick}
-        />
+      <CalendarStats
+        today={todayCount}
+        upcoming={upcomingCount}
+        online={onlineCount}
+        attendees={0}
+      />
+
+      <CalendarToolBar
+        search={search}
+        setSearch={setSearch}
+        calendarRef={calendarRef}
+        activeView={activeView}
+        setActiveView={setActiveView}
+      />
+      {/* Calendar */}
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div className="xl:col-span-3 rounded-2xl border border-slate-700 bg-slate-900 p-6">
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[
+              dayGridPlugin,
+              timeGridPlugin,
+              interactionPlugin,
+              listPlugin,
+            ]}
+            initialView={activeView}
+            headerToolbar={false}
+            selectable
+            editable={false}
+            weekends
+            height="80vh"
+            events={events}
+            dateClick={handleDateClick}
+            eventClick={handleEventClick}
+          />
+        </div>
+
+        <UpcomingMeetings meetings={upcomingMeetings} />
       </div>
+      {showMeetingForm && (
+        <MeetingForm
+          meeting={selectedMeeting}
+          isEditing={isEditing}
+          selectedDate={selectedDate}
+          onClose={() => setShowMeetingForm(false)}
+          onSuccess={() => {
+            setShowMeetingForm(false);
+            loadMeetings();
+          }}
+        />
+      )}
+
+      {/* Meeting Details */}
+      <MeetingDetails
+        meeting={selectedMeeting}
+        open={showMeetingDetails}
+        onClose={() => {
+          setShowMeetingDetails(false);
+          setSelectedMeeting(null);
+        }}
+        onEdit={() => {
+          setShowMeetingDetails(false);
+          setIsEditing(true);
+          setShowMeetingForm(true);
+        }}
+        onDelete={async () => {
+          if (!window.confirm("Delete this meeting?")) return;
+
+          try {
+            await meetingsAPI.deleteMeeting(selectedMeeting.id);
+
+            setShowMeetingDetails(false);
+            setSelectedMeeting(null);
+
+            loadMeetings();
+          } catch (err) {
+            console.error(err);
+          }
+        }}
+      />
     </div>
   );
 }

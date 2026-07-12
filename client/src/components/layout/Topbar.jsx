@@ -37,10 +37,8 @@ export default function Topbar() {
 
     toast.success("Company switched successfully")
   }
-  console.log("===== AUTH STORE =====");
-  console.log(useAuthStore.getState());
-  console.log("Companies:", companies);
-  console.log("Active Company:", activeCompany);
+
+  
   //console.log("Companies:", companies)
   //console.log("Active Company:", activeCompany)
   return (
