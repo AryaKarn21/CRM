@@ -11,7 +11,7 @@ Contact.init({
   email:        { type: DataTypes.STRING },
   phone:        { type: DataTypes.STRING },
   jobTitle:     { type: DataTypes.STRING },
-  department:   { type: DataTypes.STRING },
+  department:   { type: DataTypes.STRING , allowNull: true},
   accountId:    { type: DataTypes.UUID, allowNull: true },
   assignedToId: { type: DataTypes.UUID, allowNull: true },
 }, {

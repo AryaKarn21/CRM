@@ -77,7 +77,7 @@ export default function DataTable({
             ) : (
               data.map((row, i) => (
                 <tr
-                  key={row._id || i}
+                  key={row.id || i}
                   className={cn(onRowClick && 'cursor-pointer')}
                   onClick={() => onRowClick?.(row)}
                 >

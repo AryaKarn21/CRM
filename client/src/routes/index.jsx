@@ -8,7 +8,7 @@ import Login from "@/pages/auth/Login";
 import NotFound from "@/pages/errors/NotFound";
 import Unauthorized from "@/pages/errors/Unauthorized";
 //import Login from '@/pages/auth/Login'
-
+import NotificationCenter from "@/pages/notifications/NotificationCenter";
 //import Meetings from "@/pages/calendar/Meetings";
 
 // ── Lazy loaded (only when route is visited) ─────────────────
@@ -21,6 +21,7 @@ const AccountDetail = lazy(() => import("@/pages/crm/accounts/AccountDetail"));
 const AccountEdit = lazy(() => import("@/pages/crm/accounts/AccountEdit"));
 const LeadEdit = lazy(() => import("@/pages/crm/leads/LeadEdit"));
 const ContactsList = lazy(() => import("@/pages/crm/contacts/ContactsList"));
+const ContactEdit = lazy(() => import("@/pages/crm/contacts/ContactEdit"));
 const OpportunitiesList = lazy(
   () => import("@/pages/crm/opportunities/OpportunitiesList"),
 );
@@ -31,6 +32,10 @@ const OpportunityKanban = lazy(
 const OpportunityDetail = lazy(
   () => import("@/pages/crm/opportunities/OpportunityDetail"),
 );
+const OpportunityEdit = lazy(
+  () => import("@/pages/crm/opportunities/OpportunityEdit"),
+);
+
 const EmployeesList = lazy(() => import("@/pages/hr/employees/EmployeesList"));
 const EmployeeDetail = lazy(
   () => import("@/pages/hr/employees/EmployeeDetail"),
@@ -40,6 +45,7 @@ const AttendanceLogs = lazy(
   () => import("@/pages/hr/attendance/AttendanceLogs"),
 );
 const LeaveRequests = lazy(() => import("@/pages/hr/leaves/LeaveRequests"));
+const LeaveEdit = lazy(() => import("@/pages/hr/leaves/LeaveEdit"));
 const PayrollRuns = lazy(() => import("@/pages/hr/payroll/PayrollRuns"));
 const FinanceOverview = lazy(
   () => import("@/pages/finance/overview/FinanceOverview"),
@@ -148,7 +154,14 @@ export const router = createBrowserRouter([
               </S>
             ),
           },
-
+          {
+            path: "/notifications",
+            element: (
+              <S>
+                <NotificationCenter />
+              </S>
+            ),
+          },
           // CRM
           {
             path: "/crm/leads",
@@ -215,6 +228,16 @@ export const router = createBrowserRouter([
               </S>
             ),
           },
+
+          {
+            path: "/crm/contacts/:id/edit",
+            element: (
+              <S>
+                <ContactEdit />
+              </S>
+            ),
+          },
+
           {
             path: "/crm/opportunities",
             element: (
@@ -236,6 +259,14 @@ export const router = createBrowserRouter([
             element: (
               <S>
                 <OpportunityDetail />
+              </S>
+            ),
+          },
+          {
+            path: "/crm/opportunities/:id/edit",
+            element: (
+              <S>
+                <OpportunityEdit />
               </S>
             ),
           },
@@ -278,6 +309,14 @@ export const router = createBrowserRouter([
             element: (
               <S>
                 <LeaveRequests />
+              </S>
+            ),
+          },
+          {
+            path: "/hr/leaves/:id/edit",
+            element: (
+              <S>
+                <LeaveEdit />
               </S>
             ),
           },
@@ -333,16 +372,16 @@ export const router = createBrowserRouter([
               </S>
             ),
           },
-        {
-  path: "/inventory/assets",
-  element: (
-    <S>
-      <Assets />
-    </S>
-  ),
-},
+          {
+            path: "/inventory/assets",
+            element: (
+              <S>
+                <Assets />
+              </S>
+            ),
+          },
 
-      {
+          {
             path: "/procurement",
             element: (
               <S>

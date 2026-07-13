@@ -1,5 +1,6 @@
 import express from "express";
 import { Meeting, User, Company } from "../models/index.js";
+import { notifyMeetingCreated } from "../services/notification.service.js";
 
 const router = express.Router();
 
@@ -92,6 +93,7 @@ router.get("/:id", async (req, res) => {
 /**
  * CREATE MEETING
  */
+
 router.post("/", async (req, res) => {
   try {
     const {
@@ -135,7 +137,14 @@ router.post("/", async (req, res) => {
       reminderMinutes,
     });
 
-    res.status(201).json({
+    // Automatically notify attendees / creator
+    await notifyMeetingCreated({
+      meeting,
+      attendeeIds: req.body.attendeeIds || [],
+      senderId: req.user.id,
+    });
+
+    return res.status(201).json({
       success: true,
       message: "Meeting created successfully",
       data: meeting,
@@ -143,7 +152,7 @@ router.post("/", async (req, res) => {
   } catch (err) {
     console.error(err);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });

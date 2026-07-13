@@ -72,14 +72,33 @@ export default function EmployeesList() {
       render: (val = 'active') => <Badge variant={classifyStatus(val)} dot>{val}</Badge>,
     },
     {
-      key: '_id', label: '',
-      render: (id) => (
-        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/hr/employees/${id}`)}>View</button>
-          <button className="btn btn-ghost btn-sm text-red-500" onClick={() => { if (confirm('Remove employee?')) deleteMutation.mutate(id) }}>Remove</button>
-        </div>
-      ),
-    },
+  key: "id",
+  label: "",
+  render: (_, row) => (
+    <div
+      className="flex items-center gap-1"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        className="btn btn-ghost btn-sm"
+        onClick={() => navigate(`/hr/employees/${row.id}`)}
+      >
+        View
+      </button>
+
+      <button
+        className="btn btn-ghost btn-sm text-red-500"
+        onClick={() => {
+          if (confirm("Remove employee?")) {
+            deleteMutation.mutate(row.id);
+          }
+        }}
+      >
+        Remove
+      </button>
+    </div>
+  ),
+},
   ]
 
   return (
@@ -115,7 +134,7 @@ export default function EmployeesList() {
           sortDir={params.sortDir}
           onSort={(k, d) => setParams(p => ({ ...p, sortKey: k, sortDir: d }))}
           onPageChange={(page) => setParams(p => ({ ...p, page }))}
-          onRowClick={(row) => navigate(`/hr/employees/${row._id}`)}
+          onRowClick={(row) => navigate(`/hr/employees/${row.id}`)}
           emptyTitle="No employees yet"
           emptyDescription="Add your first employee to get started"
         />

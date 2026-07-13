@@ -3,9 +3,10 @@ import { Op, fn, col } from 'sequelize'
 import { Attendance, Employee } from '../models/index.js'
 import { protect } from '../middleware/auth.js'
 
+import { createNotification } from "../services/notification.service.js";
 const router = express.Router()
-const getCompany = (req) => req.headers['x-company-id'] || null
 
+const getCompany = (req) => req.companyId;
 router.get('/', protect, async (req, res, next) => {
   try {
     const company = getCompany(req)
@@ -47,34 +48,123 @@ router.get('/', protect, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-router.post('/checkin', protect, async (req, res, next) => {
+router.post("/checkin", protect, async (req, res, next) => {
   try {
-    const record = await Attendance.create({ ...req.body, companyId: getCompany(req), checkIn: new Date() })
-    res.status(201).json(record)
-  } catch (err) { next(err) }
-})
+    const employee = await Employee.findByPk(req.body.employeeId);
 
-router.patch('/:id/checkout', protect, async (req, res, next) => {
-  try {
-    const record = await Attendance.findByPk(req.params.id)
-    if (!record) return res.status(404).json({ message: 'Record not found' })
-    const checkOut = new Date()
-    const hours = (checkOut - record.checkIn) / (1000 * 60 * 60)
-    record.checkOut = checkOut
-    record.hoursWorked = Math.round(hours * 100) / 100
-    await record.save()
-    res.json(record)
-  } catch (err) { next(err) }
-})
+    if (!employee) {
+      return res.status(404).json({
+        message: "Employee not found",
+      });
+    }
 
-router.patch('/:id', protect, async (req, res, next) => {
+    const record = await Attendance.create({
+      ...req.body,
+      companyId: getCompany(req),
+      checkIn: new Date(),
+    });
+
+    await createNotification({
+      companyId: record.companyId,
+      userId: req.user.id,
+      senderId: req.user.id,
+      module: "hr",
+      type: "attendance_checkin",
+      title: "Attendance Checked In",
+      message: `${employee.firstName} ${employee.lastName} checked in successfully.`,
+      priority: "low",
+      actionUrl: "/hr/attendance",
+      metadata: {
+        attendanceId: record.id,
+        employeeId: employee.id,
+      },
+    });
+
+    res.status(201).json(record);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/:id/checkout", protect, async (req, res, next) => {
   try {
-    const record = await Attendance.findByPk(req.params.id)
-    if (!record) return res.status(404).json({ message: 'Record not found' })
-    await record.update(req.body)
-    res.json(record)
-  } catch (err) { next(err) }
-})
+    const record = await Attendance.findByPk(req.params.id);
+
+    if (!record) {
+      return res.status(404).json({
+        message: "Record not found",
+      });
+    }
+
+    const employee = await Employee.findByPk(record.employeeId);
+
+    const checkOut = new Date();
+
+    const hours =
+      (checkOut - record.checkIn) / (1000 * 60 * 60);
+
+    record.checkOut = checkOut;
+    record.hoursWorked = Math.round(hours * 100) / 100;
+
+    await record.save();
+
+    await createNotification({
+      companyId: record.companyId,
+      userId: req.user.id,
+      senderId: req.user.id,
+      module: "hr",
+      type: "attendance_checkout",
+      title: "Attendance Checked Out",
+      message: `${employee.firstName} ${employee.lastName} checked out successfully.`,
+      priority: "low",
+      actionUrl: "/hr/attendance",
+      metadata: {
+        attendanceId: record.id,
+        employeeId: employee.id,
+      },
+    });
+
+    res.json(record);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/:id", protect, async (req, res, next) => {
+  try {
+    const record = await Attendance.findByPk(req.params.id);
+
+    if (!record) {
+      return res.status(404).json({
+        message: "Record not found",
+      });
+    }
+
+    await record.update(req.body);
+
+    const employee = await Employee.findByPk(record.employeeId);
+
+    await createNotification({
+      companyId: record.companyId,
+      userId: req.user.id,
+      senderId: req.user.id,
+      module: "hr",
+      type: "attendance_updated",
+      title: "Attendance Updated",
+      message: `${employee.firstName} ${employee.lastName}'s attendance has been updated.`,
+      priority: "medium",
+      actionUrl: "/hr/attendance",
+      metadata: {
+        attendanceId: record.id,
+        employeeId: employee.id,
+      },
+    });
+
+    res.json(record);
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get('/shifts', protect, (req, res) => res.json([{ _id: '1', name: 'Morning', start: '09:00', end: '17:00' }, { _id: '2', name: 'Evening', start: '14:00', end: '22:00' }]))
 
@@ -92,5 +182,44 @@ router.get('/summary', protect, async (req, res, next) => {
     res.json(summary.map(s => ({ _id: s.status, count: Number(s.count) })))
   } catch (err) { next(err) }
 })
+
+
+router.delete("/:id", protect, async (req, res, next) => {
+  try {
+    const record = await Attendance.findByPk(req.params.id);
+
+    if (!record) {
+      return res.status(404).json({
+        message: "Record not found",
+      });
+    }
+
+    const employee = await Employee.findByPk(record.employeeId);
+
+    await createNotification({
+      companyId: record.companyId,
+      userId: req.user.id,
+      senderId: req.user.id,
+      module: "hr",
+      type: "attendance_deleted",
+      title: "Attendance Deleted",
+      message: `${employee.firstName} ${employee.lastName}'s attendance has been deleted.`,
+      priority: "low",
+      actionUrl: "/hr/attendance",
+      metadata: {
+        attendanceId: record.id,
+        employeeId: employee.id,
+      },
+    });
+
+    await record.destroy();
+
+    res.json({
+      message: "Attendance deleted",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default router

@@ -40,6 +40,8 @@ import TicketReply from "./TicketReply.js";
 import AuditLog from "./AuditLog.js";
 import Role from "./Role.js";
 import OTP from "./OTP.js";
+import Notification from "./Notification.js";
+import NotificationPreference from "./NotificationPreference.js";
 
 // ── Company ───────────────────────────────────────────────
 Company.hasMany(Company, { as: "children", foreignKey: "parentId" });
@@ -98,6 +100,39 @@ User.hasMany(Meeting, {
 Meeting.belongsTo(User, {
   foreignKey: "organizerId",
   as: "organizer",
+});
+
+// User -> Notifications (received)
+User.hasMany(Notification, {
+  foreignKey: "userId",
+  as: "notifications",
+});
+
+Notification.belongsTo(User, {
+  foreignKey: "userId",
+  as: "user",
+});
+
+// User -> Notification Sender
+User.hasMany(Notification, {
+  foreignKey: "senderId",
+  as: "sentNotifications",
+});
+
+Notification.belongsTo(User, {
+  foreignKey: "senderId",
+  as: "sender",
+});
+
+// User -> Preferences
+User.hasOne(NotificationPreference, {
+  foreignKey: "userId",
+  as: "notificationPreference",
+});
+
+NotificationPreference.belongsTo(User, {
+  foreignKey: "userId",
+  as: "user",
 });
 
 // ── Account ───────────────────────────────────────────────
@@ -227,7 +262,6 @@ Warehouse.hasMany(Asset, {
   foreignKey: "warehouseId",
 });
 
-
 StockTransfer.belongsTo(Company, {
   foreignKey: "companyId",
 });
@@ -333,6 +367,8 @@ const allModels = [
   AuditLog,
   OTP,
   PasswordResetToken,
+  Notification,
+  NotificationPreference,
 ];
 allModels.forEach(withMongoCompatJSON);
 
@@ -372,4 +408,6 @@ export {
   AuditLog,
   OTP,
   PasswordResetToken,
+  Notification,
+  NotificationPreference,
 };
