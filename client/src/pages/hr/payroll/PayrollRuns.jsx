@@ -7,9 +7,9 @@ import FilterBar from '@/components/shared/FilterBar'
 import Badge from '@/components/ui/Badge'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
-import { createNotification } from "../services/notification.service.js";
 
-const PAYROLL_STATUS = ['Draft', 'Processing', 'Completed', 'Failed']
+const PAYROLL_STATUS = ['draft', 'processing', 'processed', 'approved', 'paid']
+
 
 export default function PayrollRuns() {
   const queryClient = useQueryClient()

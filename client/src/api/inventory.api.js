@@ -34,10 +34,17 @@ updateTransfer: (id, data) =>
 deleteTransfer: (id) =>
   api.delete(`/inventory/transfers/${id}`),
 
+getAdjustments: (params) =>
+  api.get("/inventory/adjustments", { params }),
+
+createAdjustment: (data) =>
+  api.post("/inventory/adjustments", data),
 
 
+updateAdjustment: (id, data) =>
+  api.patch(`/inventory/adjustments/${id}`, data),
 
-
-
+deleteAdjustment: (id) =>
+  api.delete(`/inventory/adjustments/${id}`),
 
 };

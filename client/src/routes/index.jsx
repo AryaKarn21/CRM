@@ -56,9 +56,20 @@ const ExpensesList = lazy(
 const GeneralLedger = lazy(
   () => import("@/pages/finance/ledger/GeneralLedger"),
 );
+const ExpenseDetails = lazy(
+  () => import("@/pages/finance/expenses/ExpenseDetails"),
+);
+
+const EditExpense = lazy(() => import("@/pages/finance/expenses/EditExpense"));
+
+//inventory
 const ItemsList = lazy(() => import("@/pages/inventory/ItemsList"));
 const Warehouses = lazy(() => import("@/pages/inventory/Warehouses"));
 const Assets = lazy(() => import("@/pages/inventory/Assets"));
+const StockTransfers = lazy(() => import("@/pages/inventory/StockTransfers"));
+const StockAdjustments = lazy(
+  () => import("@/pages/inventory/StockAdjustments"),
+);
 const PurchaseOrders = lazy(() => import("@/pages/procurement/PurchaseOrders"));
 const PurchaseDetails = lazy(
   () => import("@/pages/procurement/PurchaseDetails"),
@@ -355,6 +366,23 @@ export const router = createBrowserRouter([
             ),
           },
 
+          {
+            path: "/finance/expenses/:id",
+            element: (
+              <S>
+                <ExpenseDetails />
+              </S>
+            ),
+          },
+          {
+            path: "/finance/expenses/:id/edit",
+            element: (
+              <S>
+                <EditExpense />
+              </S>
+            ),
+          },
+
           // Other modules
           {
             path: "/inventory",
@@ -377,6 +405,24 @@ export const router = createBrowserRouter([
             element: (
               <S>
                 <Assets />
+              </S>
+            ),
+          },
+
+          {
+            path: "/inventory/transfers",
+            element: (
+              <S>
+                <StockTransfers />
+              </S>
+            ),
+          },
+
+          {
+            path: "/inventory/adjustments",
+            element: (
+              <S>
+                <StockAdjustments />
               </S>
             ),
           },

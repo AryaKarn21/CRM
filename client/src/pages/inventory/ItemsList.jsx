@@ -129,6 +129,14 @@ export default function ItemsList() {
         </div>
       ),
     },
+    {
+      key: "code",
+      label: "Item Code",
+      render: (value) => (
+        <span className="font-mono font-semibold text-blue-500">{value}</span>
+      ), 
+    },
+
     { key: "category", label: "Category", render: (val) => val || "—" },
     {
       key: "quantity",

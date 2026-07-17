@@ -1,11 +1,13 @@
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { format, formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow, isValid, parseISO } from 'date-fns'
 
+// Tailwind class merger
 export function cn(...inputs) {
   return twMerge(clsx(inputs))
 }
 
+// Format currency for Nepal (NPR) by default
 export function formatCurrency(amount, currency = 'NPR') {
   if (amount == null) return '—'
   return new Intl.NumberFormat('en-NP', {
@@ -14,27 +16,40 @@ export function formatCurrency(amount, currency = 'NPR') {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount)
+} 
+
+// Safely format relative time (e.g., "3 days ago") without crashing
+export function formatRelativeTime(dateValue) {
+  if (!dateValue) return '—'
+  
+  const date = typeof dateValue === 'string' ? parseISO(dateValue) : new Date(dateValue)
+  if (!isValid(date)) return '—'
+  
+  return formatDistanceToNow(date, { addSuffix: true })
 }
 
-export function formatDate(date, fmt = 'MMM d, yyyy') {
-  if (!date) return '—'
-  return format(new Date(date), fmt)
+// NEW: Safely format standard dates (e.g., "Jan 1, 2026")
+export function formatDate(dateValue, formatStr = 'PPP') {
+  if (!dateValue) return '—'
+  
+  const date = typeof dateValue === 'string' ? parseISO(dateValue) : new Date(dateValue)
+  if (!isValid(date)) return '—'
+  
+  return format(date, formatStr)
 }
 
-export function formatRelativeTime(date) {
-  if (!date) return '—'
-  return formatDistanceToNow(new Date(date), { addSuffix: true })
-}
-
+// Get user initials for avatars
 export function getInitials(name = '') {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
 }
 
+// Truncate long text strings
 export function truncate(str, length = 40) {
   if (!str) return ''
   return str.length > length ? str.slice(0, length) + '...' : str
 }
 
+// Map database statuses to UI component color intents
 export function classifyStatus(status) {
   const map = {
     active: 'success', open: 'info', closed: 'gray', won: 'success',
