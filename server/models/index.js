@@ -18,7 +18,9 @@ import Lead from "./Lead.js";
 import LeadNote from "./LeadNote.js";
 import Employee from "./Employee.js";
 import EmployeeDocument from "./EmployeeDocument.js";
+import PerformanceReview from "./PerformanceReview.js";
 import Attendance from "./Attendance.js";
+import Shift from "./Shift.js";
 import Leave from "./Leave.js";
 import LeaveType from "./LeaveType.js";
 import PayrollRun from "./PayrollRun.js";
@@ -29,6 +31,7 @@ import Warehouse from "./Warehouse.js";
 import InventoryItem from "./InventoryItem.js";
 import Asset from "./Asset.js";
 import StockTransfer from "./StockTransfer.js";
+import StockAdjustment from "./StockAdjustment.js";
 import Vendor from "./Vendor.js";
 import PurchaseOrder from "./PurchaseOrder.js";
 import PurchaseOrderItem from "./PurchaseOrderItem.js";
@@ -42,6 +45,7 @@ import Role from "./Role.js";
 import OTP from "./OTP.js";
 import Notification from "./Notification.js";
 import NotificationPreference from "./NotificationPreference.js";
+import DailyReport from "./DailyReport.js";
 
 // ── Company ───────────────────────────────────────────────
 Company.hasMany(Company, { as: "children", foreignKey: "parentId" });
@@ -188,12 +192,46 @@ Employee.hasMany(Attendance, {
   foreignKey: "employeeId",
 });
 Employee.hasMany(Asset, { as: "assets", foreignKey: "assignedToId" });
+
+// Employee -> Shift
+Employee.belongsTo(Shift, { as: "shift", foreignKey: "shiftId" });
+Shift.hasMany(Employee, { as: "employees", foreignKey: "shiftId" });
+
+// Employee -> Reporting Manager (self-referencing)
+Employee.belongsTo(Employee, {
+  as: "reportingManager",
+  foreignKey: "reportingManagerId",
+});
+Employee.hasMany(Employee, {
+  as: "directReports",
+  foreignKey: "reportingManagerId",
+});
+
+// Employee -> Performance Reviews
+Employee.hasMany(PerformanceReview, {
+  as: "performanceReviews",
+  foreignKey: "employeeId",
+});
+PerformanceReview.belongsTo(Employee, {
+  as: "employee",
+  foreignKey: "employeeId",
+});
+PerformanceReview.belongsTo(Employee, {
+  as: "reviewer",
+  foreignKey: "reviewerId",
+});
+PerformanceReview.belongsTo(Company, { foreignKey: "companyId" });
 //Meeting
 Meeting.hasMany(MeetingAttendee, {
   foreignKey: "meetingId",
   as: "attendees",
 });
 
+// ── Daily Reports ─────────────────────────────────────────
+DailyReport.belongsTo(Company, { foreignKey: "companyId" });
+DailyReport.belongsTo(Employee, { as: "employee", foreignKey: "employeeId" });
+DailyReport.belongsTo(User, { as: "submittedBy", foreignKey: "submittedById" });
+Employee.hasMany(DailyReport, { as: "dailyReports", foreignKey: "employeeId" });
 MeetingAttendee.belongsTo(Meeting, {
   foreignKey: "meetingId",
   as: "meeting",
@@ -213,6 +251,26 @@ MeetingAttendee.belongsTo(User, {
 Attendance.belongsTo(Company, { foreignKey: "companyId" });
 Attendance.belongsTo(Employee, { as: "employee", foreignKey: "employeeId" });
 
+// ── Shift ─────────────────────────────────────────────
+
+Shift.belongsTo(Company, {
+  foreignKey: "companyId",
+});
+
+Company.hasMany(Shift, {
+  as: "shifts",
+  foreignKey: "companyId",
+});
+
+Shift.hasMany(Attendance, {
+  as: "attendance",
+  foreignKey: "shiftId",
+});
+
+Attendance.belongsTo(Shift, {
+  as: "shift",
+  foreignKey: "shiftId",
+});
 // ── Leave / LeaveType ─────────────────────────────────────
 Leave.belongsTo(Company, { foreignKey: "companyId" });
 Leave.belongsTo(Employee, { as: "employee", foreignKey: "employeeId" });
@@ -291,6 +349,36 @@ InventoryItem.hasMany(StockTransfer, {
   foreignKey: "itemId",
 });
 
+Warehouse.hasMany(StockAdjustment, {
+  foreignKey: "warehouseId",
+  as: "adjustments",
+});
+
+StockAdjustment.belongsTo(Warehouse, {
+  foreignKey: "warehouseId",
+  as: "warehouse",
+});
+
+InventoryItem.hasMany(StockAdjustment, {
+  foreignKey: "itemId",
+  as: "adjustments",
+});
+
+StockAdjustment.belongsTo(InventoryItem, {
+  foreignKey: "itemId",
+  as: "item",
+});
+
+User.hasMany(StockAdjustment, {
+  foreignKey: "createdById",
+  as: "stockAdjustments",
+});
+
+StockAdjustment.belongsTo(User, {
+  foreignKey: "createdById",
+  as: "createdBy",
+});
+
 // ── Procurement ───────────────────────────────────────────
 Vendor.belongsTo(Company, { foreignKey: "companyId" });
 PurchaseOrder.belongsTo(Company, { foreignKey: "companyId" });
@@ -346,6 +434,7 @@ const allModels = [
   MeetingAttendee,
   EmployeeDocument,
   Attendance,
+  Shift,
   Leave,
   LeaveType,
   PayrollRun,
@@ -356,6 +445,7 @@ const allModels = [
   InventoryItem,
   Asset,
   StockTransfer,
+  StockAdjustment,
   Vendor,
   PurchaseOrder,
   PurchaseOrderItem,
@@ -369,6 +459,8 @@ const allModels = [
   PasswordResetToken,
   Notification,
   NotificationPreference,
+  PerformanceReview,
+   DailyReport,
 ];
 allModels.forEach(withMongoCompatJSON);
 
@@ -387,6 +479,7 @@ export {
   Employee,
   EmployeeDocument,
   Attendance,
+  Shift,
   Leave,
   LeaveType,
   PayrollRun,
@@ -397,6 +490,7 @@ export {
   InventoryItem,
   Asset,
   StockTransfer,
+  StockAdjustment,
   Vendor,
   PurchaseOrder,
   PurchaseOrderItem,
@@ -410,4 +504,6 @@ export {
   PasswordResetToken,
   Notification,
   NotificationPreference,
+  PerformanceReview,
+   DailyReport,
 };

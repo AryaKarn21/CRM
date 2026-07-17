@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { sequelize } from "./config/db.js";
 import "./models/index.js"; // registers all associations before sync/queries run
+import path from "path";
 
 import authRoutes from "./routes/auth.routes.js";
 import leadsRoutes from "./routes/leads.routes.js";
@@ -11,7 +12,9 @@ import contactsRoutes from "./routes/contacts.routes.js";
 import opportunitiesRoutes from "./routes/opportunities.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import employeesRoutes from "./routes/employees.routes.js";
+import performanceRoutes from "./routes/performance.routes.js";
 import attendanceRoutes from "./routes/attendance.routes.js";
+import shiftRoutes from "./routes/shifts.routes.js";
 import leavesRoutes from "./routes/leaves.routes.js";
 import payrollRoutes from "./routes/payroll.routes.js";
 import financeRoutes from "./routes/finance.routes.js";
@@ -34,6 +37,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.use("/api/auth", authRoutes);
 
@@ -51,8 +55,10 @@ app.use("/api/contacts", protect, resolveCompany, contactsRoutes);
 app.use("/api/opportunities", protect, resolveCompany, opportunitiesRoutes);
 app.use("/api/dashboard", protect, resolveCompany, dashboardRoutes);
 app.use("/api/employees", protect, resolveCompany, employeesRoutes);
+app.use("/api/performance", protect, resolveCompany, performanceRoutes);
 app.use("/api/users", protect, resolveCompany, usersRoutes);
 app.use("/api/attendance", protect, resolveCompany, attendanceRoutes);
+app.use("/api/shifts", protect, resolveCompany, shiftRoutes);
 app.use("/api/leaves", protect, resolveCompany, leavesRoutes);
 app.use("/api/payroll", protect, resolveCompany, payrollRoutes);
 //app.use('/api/payroll', protect, resolveCompany, payrollRoutes)
@@ -69,7 +75,6 @@ app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-
 async function start() {
   try {
     await sequelize.authenticate();

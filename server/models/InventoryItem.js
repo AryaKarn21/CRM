@@ -1,29 +1,45 @@
-import { DataTypes, Model } from 'sequelize'
-import { sequelize } from '../config/db.js'
+import { DataTypes, Model } from "sequelize";
+import { sequelize } from "../config/db.js";
 
 class InventoryItem extends Model {}
 
-InventoryItem.init({
-  id:              { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-  companyId:       { type: DataTypes.UUID, allowNull: true },
-  name:            { type: DataTypes.STRING, allowNull: false },
-  sku:             { type: DataTypes.STRING },
-  category:        { type: DataTypes.STRING },
-  unit:            { type: DataTypes.STRING, defaultValue: 'pcs' },
-  quantity:        { type: DataTypes.FLOAT, defaultValue: 0 },
-  unitPrice:       { type: DataTypes.FLOAT, defaultValue: 0 },
-  reorderPoint:    { type: DataTypes.FLOAT, defaultValue: 0 },
-  valuationMethod: {
-    type: DataTypes.ENUM('FIFO','LIFO','Weighted Average'),
-    defaultValue: 'FIFO',
+InventoryItem.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    companyId: { type: DataTypes.UUID, allowNull: true },
+    code: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    name: { type: DataTypes.STRING, allowNull: false },
+    sku: { type: DataTypes.STRING },
+    code: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    category: { type: DataTypes.STRING },
+    unit: { type: DataTypes.STRING, defaultValue: "pcs" },
+    quantity: { type: DataTypes.FLOAT, defaultValue: 0 },
+    unitPrice: { type: DataTypes.FLOAT, defaultValue: 0 },
+    reorderPoint: { type: DataTypes.FLOAT, defaultValue: 0 },
+    valuationMethod: {
+      type: DataTypes.ENUM("FIFO", "LIFO", "Weighted Average"),
+      defaultValue: "FIFO",
+    },
+    warehouseId: { type: DataTypes.UUID, allowNull: true },
+    description: { type: DataTypes.TEXT },
   },
-  warehouseId:     { type: DataTypes.UUID, allowNull: true },
-  description:     { type: DataTypes.TEXT },
-}, {
-  sequelize,
-  modelName: 'InventoryItem',
-  tableName: 'inventory_items',
-  timestamps: true,
-})
+  {
+    sequelize,
+    modelName: "InventoryItem",
+    tableName: "inventory_items",
+    timestamps: true,
+  },
+);
 
-export default InventoryItem
+export default InventoryItem;

@@ -10,7 +10,11 @@ StockTransfer.init(
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
-
+    referenceNo: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
     companyId: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -42,21 +46,12 @@ StockTransfer.init(
       defaultValue: DataTypes.NOW,
     },
 
-    referenceNo: {
-      type: DataTypes.STRING,
-    },
-
     remarks: {
       type: DataTypes.TEXT,
     },
 
     status: {
-      type: DataTypes.ENUM(
-        "Pending",
-        "Approved",
-        "Completed",
-        "Cancelled"
-      ),
+      type: DataTypes.ENUM("Pending", "Approved", "Completed", "Cancelled"),
       defaultValue: "Pending",
     },
 
@@ -70,7 +65,7 @@ StockTransfer.init(
     modelName: "StockTransfer",
     tableName: "stock_transfers",
     timestamps: true,
-  }
+  },
 );
 
 export default StockTransfer;
