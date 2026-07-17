@@ -1,0 +1,113 @@
+/* Calendar Container */
+.fc {
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+/* Remove default border */
+.fc-theme-standard td,
+.fc-theme-standard th,
+.fc-scrollgrid {
+  border-color: var(--border) !important;
+}
+
+/* Toolbar */
+.fc-toolbar {
+  margin-bottom: 1rem !important;
+}
+
+.fc-toolbar-title {
+  font-size: 1.4rem !important;
+  font-weight: 700 !important;
+  color: var(--text-primary);
+}
+
+/* Buttons */
+.fc .fc-button {
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  padding: 8px 14px !important;
+}
+
+.fc .fc-button:hover {
+  background: var(--primary) !important;
+  color: white !important;
+}
+
+.fc .fc-button-active {
+  background: var(--primary) !important;
+  color: white !important;
+}
+
+/* Today's cell */
+.fc-day-today {
+  background: rgba(59,130,246,.08) !important;
+}
+
+/* Event */
+.fc-event {
+  border: none !important;
+  border-radius: 10px !important;
+  padding: 4px 6px !important;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Hover */
+.fc-event:hover {
+  transform: scale(1.02);
+  transition: .2s;
+}
+
+/* Day numbers */
+.fc-daygrid-day-number {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Header */
+.fc-col-header-cell {
+  background: var(--surface-2);
+}
+
+.fc-col-header-cell-cushion {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* More link */
+.fc-daygrid-more-link {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.priority-high {
+  background: #ef4444 !important;
+}
+
+.priority-medium {
+  background: #f59e0b !important;
+}
+
+.priority-low {
+  background: #22c55e !important;
+}
+
+.fc-event-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc-daygrid-event {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.fc-daygrid-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}

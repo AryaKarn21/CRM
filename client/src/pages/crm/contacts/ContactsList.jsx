@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { contactsAPI } from "@/api/contacts.api";
 import DataTable from "@/components/shared/DataTable";
@@ -128,27 +128,39 @@ export default function ContactsList() {
       sortable: true,
       render: (val) => formatDate(val),
     },
-    {
-      key: "id",
-      label: "",
-      render: (id) => (
-        <div
-          className="flex items-center gap-1"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            className="btn btn-ghost btn-sm text-red-500"
-            onClick={() => {
-              if (confirm("Delete?")) deleteMutation.mutate(id);
-            }}
-          >
-            Delete
-          </button>
-        </div>
-      ),
-    },
-  ];
+ {
+  key: "id",
+  label: "Actions",
+  render: (id, row) => (
+    <div
+      className="flex items-center gap-2"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        className="btn btn-ghost btn-sm text-blue-600"
+        onClick={() => navigate(`/crm/contacts/${id}/edit`)}
+      >
+        Edit
+      </button>
 
+      <button
+        className="btn btn-ghost btn-sm text-red-500"
+        onClick={() => {
+          if (
+            confirm(
+              `Delete ${row.firstName} ${row.lastName}?`
+            )
+          ) {
+            deleteMutation.mutate(id);
+          }
+        }}
+      >
+        Delete
+      </button>
+    </div>
+  ),
+}
+  ];
   return (
     <div className="animate-fade-in">
       <div className="page-header">

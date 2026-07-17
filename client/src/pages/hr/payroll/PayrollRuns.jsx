@@ -8,7 +8,8 @@ import Badge from '@/components/ui/Badge'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
-const PAYROLL_STATUS = ['Draft', 'Processing', 'Completed', 'Failed']
+const PAYROLL_STATUS = ['draft', 'processing', 'processed', 'approved', 'paid']
+
 
 export default function PayrollRuns() {
   const queryClient = useQueryClient()

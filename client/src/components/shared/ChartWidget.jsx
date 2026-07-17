@@ -1,57 +1,225 @@
-import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Area, AreaChart } from 'recharts'
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Area,
+  AreaChart,
+} from "recharts";
 
-const CustomTooltip = ({ active, payload, label, formatter }) => {
-  if (!active || !payload?.length) return null
+import ReactApexChart from "react-apexcharts";
+
+export default function ChartWidget({
+  type = "line",
+  data = [],
+  dataKey,
+  xKey = "label",
+  color = "#3b82f6",
+  height = 220,
+  formatter,
+  title,
+}) {
+  const Chart = {
+    line: LineChart,
+    bar: BarChart,
+    area: AreaChart,
+  }[type];
+
+  const isApex = [
+    "apex-line",
+    "apex-bar",
+    "apex-area",
+    "donut",
+    "horizontal-bar",
+  ].includes(type);
+
+  const apexSeries =
+  type === "donut"
+    ? data.map((d) => Number(d[dataKey]) || 0)
+    : [
+        {
+          name: title || "Series",
+          data: data.map((d) => Number(d[dataKey]) || 0),
+        },
+      ];
+
+  const apexOptions = {
+    chart: {
+      background: "transparent",
+
+      toolbar: {
+        show: false,
+      },
+
+      zoom: {
+        enabled: false,
+      },
+
+      animations: {
+        enabled: true,
+        easing: "easeinout",
+        speed: 900,
+      },
+    },
+
+    theme: {
+      mode: "light",
+    },
+
+    colors: [color],
+
+    stroke: {
+      curve: "smooth",
+      width: 3,
+    },
+
+    dataLabels: {
+      enabled: false,
+    },
+
+    grid: {
+      borderColor: "#E5E7EB",
+      strokeDashArray: 5,
+    },
+
+    xaxis: {
+      categories: data.map((d) => d[xKey]),
+
+      labels: {
+        style: {
+          colors: "#94A3B8",
+          fontSize: "12px",
+        },
+      },
+
+      axisBorder: {
+        show: false,
+      },
+
+      axisTicks: {
+        show: false,
+      },
+    },
+
+    yaxis: {
+      labels: {
+        style: {
+          colors: "#94A3B8",
+          fontSize: "12px",
+        },
+      },
+    },
+
+    legend: {
+      show: true,
+      position: "bottom",
+      fontSize: "13px",
+    },
+
+    tooltip: {
+      theme: "light",
+      shared: true,
+      intersect: false,
+    },
+
+    fill: {
+      type: type === "apex-area" ? "gradient" : "solid",
+
+      gradient: {
+        shadeIntensity: 1,
+        opacityFrom: 0.35,
+        opacityTo: 0.05,
+        stops: [0, 90, 100],
+      },
+    },
+
+    labels: type === "donut" ? (data || []).map((d) => d?.[xKey]) : undefined,
+
+    plotOptions: {
+      bar: {
+        horizontal: type === "horizontal-bar",
+
+        borderRadius: 8,
+
+        columnWidth: "45%",
+      },
+
+      pie: {
+        donut: {
+          size: "72%",
+
+          labels: {
+            show: true,
+
+            total: {
+              show: true,
+
+              label: "Total",
+
+              fontSize: "18px",
+            },
+          },
+        },
+      },
+    },
+
+    responsive: [
+      {
+        breakpoint: 1024,
+
+        options: {
+          chart: {
+            height: 300,
+          },
+        },
+      },
+
+      {
+        breakpoint: 640,
+
+        options: {
+          chart: {
+            height: 260,
+          },
+
+          legend: {
+            position: "bottom",
+          },
+        },
+      },
+    ],
+  };
+ console.log("==================================");
+console.log("Chart Type:", type);
+console.log("Chart Data:", data);
+console.log("Data Key:", dataKey);
+console.log("X Key:", xKey);
+console.log("Series:", apexSeries);
+console.log("Options:", apexOptions);
+console.log("==================================");
+ 
   return (
-    <div className="rounded-xl px-3 py-2 shadow-lg" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
-      <p className="text-[11px] mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} className="text-[13px] font-semibold" style={{ color: p.color }}>
-          {formatter ? formatter(p.value) : p.value}
-        </p>
-      ))}
-    </div>
-  )
-}
-
-export default function ChartWidget({ type = 'line', data = [], dataKey, xKey = 'label', color = 'var(--primary)', height = 220, formatter, title }) {
-  const commonProps = {
-    data,
-    margin: { top: 4, right: 4, left: 0, bottom: 0 },
-  }
-
-  const axisProps = {
-    style: { fontSize: 11, fill: 'var(--text-muted)' },
-    tickLine: false,
-    axisLine: false,
-  }
-
-  const Chart = { line: LineChart, bar: BarChart, area: AreaChart }[type]
-
-  return (
-    <div>
-      {title && <p className="text-[13px] font-semibold mb-3 px-1" style={{ color: 'var(--text-primary)' }}>{title}</p>}
-      <ResponsiveContainer width="100%" height={height}>
-        <Chart {...commonProps}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-          <XAxis dataKey={xKey} {...axisProps} />
-          <YAxis {...axisProps} width={50} />
-          <Tooltip content={<CustomTooltip formatter={formatter} />} />
-          {type === 'line' && <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={false} />}
-          {type === 'bar' && <Bar dataKey={dataKey} fill={color} radius={[4, 4, 0, 0]} />}
-          {type === 'area' && (
-            <>
-              <defs>
-                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.15} />
-                  <stop offset="95%" stopColor={color} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill="url(#areaGrad)" dot={false} />
-            </>
-          )}
-        </Chart>
-      </ResponsiveContainer>
-    </div>
-  )
+    <ReactApexChart
+      options={apexOptions}
+      series={apexSeries}
+      type={
+        type === "apex-line"
+          ? "line"
+          : type === "apex-bar"
+            ? "bar"
+            : type === "apex-area"
+              ? "area"
+              : type === "horizontal-bar"
+                ? "bar"
+                : "donut"
+      }
+      height={height}
+      width="100%"
+    />
+  );
 }

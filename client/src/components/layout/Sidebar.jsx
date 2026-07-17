@@ -23,6 +23,7 @@ const NAV = [
     ]
   },
   {
+<<<<<<< HEAD
     label: "Calendar & Meetings",
     icon: Calendar,
     children: [
@@ -36,6 +37,18 @@ const NAV = [
       },
     ],
   },
+=======
+  label: "Calendar & Meetings",
+  icon: Calendar,
+  children: [
+    {
+      label: "Calendar",
+      to: "/calendar",
+    },
+    
+  ],
+},
+>>>>>>> 917c8a18016c659dc45dc14a6f58371e3c6f5578
   {
     label: 'Human Resources', icon: Users, children: [
       { label: 'Employees', to: '/hr/employees' },
@@ -51,7 +64,19 @@ const NAV = [
       { label: 'General Ledger', to: '/finance/ledger' },
     ]
   },
-  { label: 'Inventory', icon: Package, to: '/inventory' },
+ {
+  label: 'Inventory',
+  icon: Package,
+  children: [
+    { label: 'Items', to: '/inventory' },
+    { label: 'Warehouses', to: '/inventory/warehouses' },
+    { label: 'Assets', to: '/inventory/assets' },
+    { label: 'Stock Transfers', to: '/inventory/transfers' },
+    { label: 'Stock Adjustments', to: '/inventory/adjustments' },
+  ]
+},
+
+
   { label: 'Procurement', icon: ShoppingCart, to: '/procurement' },
   { label: 'Projects', icon: FolderKanban, to: '/projects' },
   { label: 'Support', icon: Headphones, to: '/support' },

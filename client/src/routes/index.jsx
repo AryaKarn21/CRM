@@ -10,7 +10,9 @@ import Login from "@/pages/auth/Login";
 import NotFound from "@/pages/errors/NotFound";
 import Unauthorized from "@/pages/errors/Unauthorized";
 //import Login from '@/pages/auth/Login'
-import Calendar from "@/pages/calendar/Calendar";
+import NotificationCenter from "@/pages/notifications/NotificationCenter";
+//import Meetings from "@/pages/calendar/Meetings";
+
 // ── Lazy loaded (only when route is visited) ─────────────────
 const Dashboard = lazy(() => import("@/pages/dashboard/Dashboard"));
 const LeadsList = lazy(() => import("@/pages/crm/leads/LeadsList"));
@@ -21,6 +23,7 @@ const AccountDetail = lazy(() => import("@/pages/crm/accounts/AccountDetail"));
 const AccountEdit = lazy(() => import("@/pages/crm/accounts/AccountEdit"));
 const LeadEdit = lazy(() => import("@/pages/crm/leads/LeadEdit"));
 const ContactsList = lazy(() => import("@/pages/crm/contacts/ContactsList"));
+const ContactEdit = lazy(() => import("@/pages/crm/contacts/ContactEdit"));
 const OpportunitiesList = lazy(
   () => import("@/pages/crm/opportunities/OpportunitiesList"),
 );
@@ -31,6 +34,10 @@ const OpportunityKanban = lazy(
 const OpportunityDetail = lazy(
   () => import("@/pages/crm/opportunities/OpportunityDetail"),
 );
+const OpportunityEdit = lazy(
+  () => import("@/pages/crm/opportunities/OpportunityEdit"),
+);
+
 const EmployeesList = lazy(() => import("@/pages/hr/employees/EmployeesList"));
 const EmployeeDetail = lazy(
   () => import("@/pages/hr/employees/EmployeeDetail"),
@@ -40,6 +47,7 @@ const AttendanceLogs = lazy(
   () => import("@/pages/hr/attendance/AttendanceLogs"),
 );
 const LeaveRequests = lazy(() => import("@/pages/hr/leaves/LeaveRequests"));
+const LeaveEdit = lazy(() => import("@/pages/hr/leaves/LeaveEdit"));
 const PayrollRuns = lazy(() => import("@/pages/hr/payroll/PayrollRuns"));
 const FinanceOverview = lazy(
   () => import("@/pages/finance/overview/FinanceOverview"),
@@ -50,7 +58,20 @@ const ExpensesList = lazy(
 const GeneralLedger = lazy(
   () => import("@/pages/finance/ledger/GeneralLedger"),
 );
+const ExpenseDetails = lazy(
+  () => import("@/pages/finance/expenses/ExpenseDetails"),
+);
+
+const EditExpense = lazy(() => import("@/pages/finance/expenses/EditExpense"));
+
+//inventory
 const ItemsList = lazy(() => import("@/pages/inventory/ItemsList"));
+const Warehouses = lazy(() => import("@/pages/inventory/Warehouses"));
+const Assets = lazy(() => import("@/pages/inventory/Assets"));
+const StockTransfers = lazy(() => import("@/pages/inventory/StockTransfers"));
+const StockAdjustments = lazy(
+  () => import("@/pages/inventory/StockAdjustments"),
+);
 const PurchaseOrders = lazy(() => import("@/pages/procurement/PurchaseOrders"));
 const PurchaseDetails = lazy(
   () => import("@/pages/procurement/PurchaseDetails"),
@@ -70,6 +91,7 @@ const Register = lazy(() => import("@/pages/auth/Register"));
 const VerifyOTP = lazy(() => import("@/pages/auth/VerifyOTP"));
 const ForgotPassword = lazy(() => import("@/pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/auth/ResetPassword"));
+const Calendar = lazy(() => import("@/pages/calendar/Calendar"));
 // ── Suspense wrapper ─────────────────────────────────────────
 function PageLoader() {
   return (
@@ -115,7 +137,11 @@ export const router = createBrowserRouter([
 
   {
     path: "/calendar",
-    element: <Calendar />,
+    element: (
+      <S>
+        <Calendar />
+      </S>
+    ),
   },
   {
     path: "/reset-password",
@@ -141,7 +167,14 @@ export const router = createBrowserRouter([
               </S>
             ),
           },
-
+          {
+            path: "/notifications",
+            element: (
+              <S>
+                <NotificationCenter />
+              </S>
+            ),
+          },
           // CRM
           {
             path: "/crm/leads",
@@ -208,6 +241,16 @@ export const router = createBrowserRouter([
               </S>
             ),
           },
+
+          {
+            path: "/crm/contacts/:id/edit",
+            element: (
+              <S>
+                <ContactEdit />
+              </S>
+            ),
+          },
+
           {
             path: "/crm/opportunities",
             element: (
@@ -229,6 +272,14 @@ export const router = createBrowserRouter([
             element: (
               <S>
                 <OpportunityDetail />
+              </S>
+            ),
+          },
+          {
+            path: "/crm/opportunities/:id/edit",
+            element: (
+              <S>
+                <OpportunityEdit />
               </S>
             ),
           },
@@ -275,6 +326,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "/hr/leaves/:id/edit",
+            element: (
+              <S>
+                <LeaveEdit />
+              </S>
+            ),
+          },
+          {
             path: "/hr/payroll",
             element: (
               <S>
@@ -309,6 +368,23 @@ export const router = createBrowserRouter([
             ),
           },
 
+          {
+            path: "/finance/expenses/:id",
+            element: (
+              <S>
+                <ExpenseDetails />
+              </S>
+            ),
+          },
+          {
+            path: "/finance/expenses/:id/edit",
+            element: (
+              <S>
+                <EditExpense />
+              </S>
+            ),
+          },
+
           // Other modules
           {
             path: "/inventory",
@@ -318,6 +394,41 @@ export const router = createBrowserRouter([
               </S>
             ),
           },
+          {
+            path: "/inventory/warehouses",
+            element: (
+              <S>
+                <Warehouses />
+              </S>
+            ),
+          },
+          {
+            path: "/inventory/assets",
+            element: (
+              <S>
+                <Assets />
+              </S>
+            ),
+          },
+
+          {
+            path: "/inventory/transfers",
+            element: (
+              <S>
+                <StockTransfers />
+              </S>
+            ),
+          },
+
+          {
+            path: "/inventory/adjustments",
+            element: (
+              <S>
+                <StockAdjustments />
+              </S>
+            ),
+          },
+
           {
             path: "/procurement",
             element: (
