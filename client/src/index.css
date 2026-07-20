@@ -107,6 +107,8 @@
   .btn-sm { padding: 5px 10px; font-size: 12px; }
   .btn-lg { padding: 10px 20px; font-size: 14px; }
   .btn-icon { padding: 7px; }
+  .btn-outline { background: transparent; color: var(--text-primary); border: 1px solid var(--border); }
+.btn-outline:hover { background: var(--surface-2); }
 
   .card {
     background: var(--surface);

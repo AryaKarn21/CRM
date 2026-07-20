@@ -89,6 +89,7 @@ const Register = lazy(() => import("@/pages/auth/Register"));
 const VerifyOTP = lazy(() => import("@/pages/auth/VerifyOTP"));
 const ForgotPassword = lazy(() => import("@/pages/auth/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/auth/ResetPassword"));
+const ProfileSettings = lazy(() => import("@/pages/settings/ProfileSettings"));
 const Calendar = lazy(() => import("@/pages/calendar/Calendar"));
 // ── Suspense wrapper ─────────────────────────────────────────
 function PageLoader() {
@@ -518,6 +519,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "/settings/profile",
+            element: (
+              <S>
+                <ProfileSettings />
+              </S>
+            ),
+          },
+          {
             path: "/settings/users/:id",
             element: (
               <S>
@@ -525,6 +534,7 @@ export const router = createBrowserRouter([
               </S>
             ),
           },
+
           {
             path: "/settings/users/:id/edit",
             element: (

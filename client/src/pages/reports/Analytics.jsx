@@ -1,53 +1,195 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   DollarSign,
   TrendingUp,
   Users,
   Activity,
-  CalendarDays,
   BarChart3,
   Target,
+  Download,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 import { reportsAPI } from "@/api/reports.api";
 import StatCard from "@/components/shared/StatCard";
 import ChartWidget from "@/components/shared/ChartWidget";
 import { formatCurrency } from "@/lib/utils";
 
+// Small helper so every panel shares the same header treatment.
+function PanelHeader({ title, subtitle, icon: Icon, iconClass }) {
+  return (
+    <div className="flex items-start justify-between gap-3 mb-4 sm:mb-5">
+      <div className="min-w-0">
+        <h3
+          className="text-[15px] sm:text-lg font-semibold truncate"
+          style={{ color: "var(--text-primary)" }}
+        >
+          {title}
+        </h3>
+        <p className="text-[12px] sm:text-sm" style={{ color: "var(--text-muted)" }}>
+          {subtitle}
+        </p>
+      </div>
+      <Icon size={20} className={`${iconClass} shrink-0`} />
+    </div>
+  );
+}
+
+function ChartSkeleton() {
+  return (
+    <div
+      className="h-[240px] sm:h-[300px] animate-pulse rounded-xl"
+      style={{ background: "var(--border)" }}
+    />
+  );
+}
+
+// Renders a labelled progress bar (used by Pipeline and Lead Sources).
+function ProgressRow({ label, valueText, percent, barColor }) {
+  return (
+    <div>
+      <div className="flex justify-between items-center gap-3 mb-1.5">
+        <span
+          className="text-[12px] sm:text-sm font-medium truncate"
+          style={{ color: "var(--text-primary)" }}
+        >
+          {label}
+        </span>
+        <span
+          className="text-[12px] sm:text-sm shrink-0"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          {valueText}
+        </span>
+      </div>
+      <div className="w-full h-2 rounded-full" style={{ background: "var(--border)" }}>
+        <div
+          className="h-2 rounded-full transition-all"
+          style={{
+            width: `${Math.min(Math.max(Number(percent) || 0, 0), 100)}%`,
+            background: barColor,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function Analytics() {
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear);
+
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: () => reportsAPI.getDashboardStats().then((res) => res.data),
   });
 
   const { data: revenueData, isLoading: revenueLoading } = useQuery({
-    queryKey: ["revenue-by-month"],
-    queryFn: () =>
-      reportsAPI
-        .getRevenueByMonth(new Date().getFullYear())
-        .then((res) => res.data),
+    queryKey: ["revenue-by-month", year],
+    queryFn: () => reportsAPI.getRevenueByMonth(year).then((res) => res.data),
   });
 
-  const { data: salesData } = useQuery({
+  const { data: salesData, isLoading: salesLoading } = useQuery({
     queryKey: ["sales-report"],
     queryFn: () => reportsAPI.getSalesReport().then((res) => res.data),
   });
 
-  const { data: forecastData } = useQuery({
+  const { data: forecastData, isLoading: forecastLoading } = useQuery({
     queryKey: ["sales-forecast"],
     queryFn: () => reportsAPI.getSalesForecast().then((res) => res.data),
   });
 
+  // /reports/sales returns a bare array; guard anyway in case it changes.
+  const salesRows = Array.isArray(salesData) ? salesData : salesData?.data || [];
+  const revenueRows = revenueData?.data || [];
+  const forecastRows = forecastData?.data || [];
+  const pipeline = Array.isArray(data?.pipeline) ? data.pipeline : [];
+  const leadSources = Array.isArray(data?.leadSources) ? data.leadSources : [];
+
+  // Client-side CSV so Export works without a new backend endpoint.
+  const handleExport = () => {
+    try {
+      const esc = (v) => {
+        if (v == null) return "";
+        const s = String(v);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const section = (title, headers, rows) =>
+        [`===== ${title} =====`, headers.join(","), ...rows.map((r) => r.map(esc).join(","))].join(
+          "\n"
+        );
+
+      const csv = [
+        "ANALYTICS REPORT",
+        `Generated,${new Date().toISOString()}`,
+        `Year,${year}`,
+        "",
+        section(
+          "SUMMARY",
+          ["Metric", "Value"],
+          [
+            ["Total Revenue", data?.totalRevenue ?? 0],
+            ["Won Deals", data?.wonDeals ?? 0],
+            ["Employees", data?.employees ?? 0],
+            ["Open Tickets", data?.openTickets ?? 0],
+          ]
+        ),
+        "",
+        section(
+          "REVENUE BY MONTH",
+          ["Month", "Revenue"],
+          revenueRows.map((r) => [r.month, r.revenue])
+        ),
+        "",
+        section(
+          "DEALS BY STAGE",
+          ["Stage", "Count"],
+          salesRows.map((r) => [r.stage, r.count])
+        ),
+        "",
+        section(
+          "SALES FORECAST",
+          ["Month", "Forecast"],
+          forecastRows.map((r) => [r.month, r.forecast])
+        ),
+        "",
+        section(
+          "PIPELINE",
+          ["Stage", "Value", "Percent"],
+          pipeline.map((p) => [p.name, p.value, p.percent])
+        ),
+        "",
+        section(
+          "LEAD SOURCES",
+          ["Source", "Leads", "Percent"],
+          leadSources.map((s) => [s.source, s.count, s.percent])
+        ),
+      ].join("\n");
+
+      const url = window.URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `analytics-${year}-${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Report exported");
+    } catch {
+      toast.error("Export failed");
+    }
+  };
+
   const stats = [
     {
       title: "Revenue",
-      value: data?.totalRevenue ? formatCurrency(data.totalRevenue) : "₹0",
+      value: formatCurrency(data?.totalRevenue || 0),
       icon: DollarSign,
       color: "success",
       change: data?.revenueGrowth,
       label: "vs last year",
     },
-
     {
       title: "Won Deals",
       value: data?.wonDeals ?? 0,
@@ -56,14 +198,12 @@ export default function Analytics() {
       change: data?.dealsGrowth,
       label: "this month",
     },
-
     {
       title: "Employees",
       value: data?.employees ?? 0,
       icon: Users,
       color: "info",
     },
-
     {
       title: "Open Tickets",
       value: data?.openTickets ?? 0,
@@ -74,39 +214,50 @@ export default function Analytics() {
     },
   ];
 
+  const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
   return (
     <div className="animate-fade-in">
-      {/* Header */}
-      <div className="page-header">
-        <div>
+      {/* ================= HEADER ================= */}
+      <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6">
+        <div className="min-w-0">
           <h1
-            className="text-[24px] font-bold"
+            className="text-[18px] sm:text-[24px] font-bold"
             style={{ color: "var(--text-primary)" }}
           >
             Analytics Dashboard
           </h1>
-
-          <p
-            className="text-[13px] mt-1"
-            style={{ color: "var(--text-muted)" }}
-          >
+          <p className="text-[12px] sm:text-[13px] mt-0.5" style={{ color: "var(--text-muted)" }}>
             Business intelligence across all CRM modules
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button className="btn btn-secondary">
-            <CalendarDays size={16} />
-            This Month
-          </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+          <select
+            className="input w-full sm:w-auto"
+            value={year}
+            onChange={(e) => setYear(Number(e.target.value))}
+            aria-label="Select year"
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
 
-          <button className="btn btn-primary">Export Report</button>
+          <button
+            className="btn btn-primary w-full sm:w-auto justify-center"
+            onClick={handleExport}
+          >
+            <Download size={16} /> Export Report
+          </button>
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* ================= KPI CARDS ================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
           {stats.map((card, index) => (
             <StatCard
               key={index}
@@ -121,262 +272,153 @@ export default function Analytics() {
           ))}
         </div>
 
-        {/* Revenue & Deals */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Revenue Trend */}
+        {/* ================= REVENUE & DEALS ================= */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
           <div
-            className="card p-6 rounded-2xl shadow-sm border"
+            className="card p-4 sm:p-6 rounded-2xl shadow-sm border overflow-hidden"
             style={{ borderColor: "var(--border)" }}
           >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3
-                  className="text-lg font-semibold"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  Revenue Trend
-                </h3>
-
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  Monthly revenue overview
-                </p>
-              </div>
-
-              <TrendingUp size={22} className="text-green-500" />
-            </div>
-
+            <PanelHeader
+              title="Revenue Trend"
+              subtitle={`Monthly revenue for ${year}`}
+              icon={TrendingUp}
+              iconClass="text-green-500"
+            />
             {revenueLoading ? (
-              <div
-                className="h-[320px] animate-pulse rounded-xl"
-                style={{ background: "var(--border)" }}
-              />
-            ) : (
+              <ChartSkeleton />
+            ) : revenueRows.length ? (
               <ChartWidget
                 type="apex-line"
                 title=""
-                data={revenueData?.data || []}
+                data={revenueRows}
                 dataKey="revenue"
                 xKey="month"
-                height={320}
+                height={300}
                 formatter={(v) => formatCurrency(v)}
               />
+            ) : (
+              <div className="py-12 text-center text-[13px]" style={{ color: "var(--text-muted)" }}>
+                No revenue recorded for {year}.
+              </div>
             )}
           </div>
 
-          {/* Deals Closed */}
           <div
-            className="card p-6 rounded-2xl shadow-sm border"
+            className="card p-4 sm:p-6 rounded-2xl shadow-sm border overflow-hidden"
             style={{ borderColor: "var(--border)" }}
           >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3
-                  className="text-lg font-semibold"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  Deals Closed
-                </h3>
-
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  Monthly sales performance
-                </p>
-              </div>
-
-              <BarChart3 size={22} className="text-blue-500" />
-            </div>
-
-            {revenueLoading ? (
-              <div
-                className="h-[320px] animate-pulse rounded-xl"
-                style={{ background: "var(--border)" }}
-              />
-            ) : (
+            <PanelHeader
+              title="Deals by Stage"
+              subtitle="Opportunities grouped by stage"
+              icon={BarChart3}
+              iconClass="text-blue-500"
+            />
+            {salesLoading ? (
+              <ChartSkeleton />
+            ) : salesRows.length ? (
               <ChartWidget
                 type="apex-bar"
                 title=""
-                data={salesData || []}
+                data={salesRows}
                 dataKey="count"
-                xKey="_id"
-                height={320}
+                xKey="stage"
+                height={300}
               />
+            ) : (
+              <div className="py-12 text-center text-[13px]" style={{ color: "var(--text-muted)" }}>
+                No opportunity data available.
+              </div>
             )}
           </div>
         </div>
 
-        {/* Forecast & Pipeline */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Sales Forecast */}
+        {/* ================= FORECAST & PIPELINE ================= */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
           <div
-            className="card p-6 rounded-2xl shadow-sm border"
+            className="card p-4 sm:p-6 rounded-2xl shadow-sm border overflow-hidden"
             style={{ borderColor: "var(--border)" }}
           >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3
-                  className="text-lg font-semibold"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  Sales Forecast
-                </h3>
-
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  Expected sales performance
-                </p>
-              </div>
-
-              <TrendingUp size={22} className="text-amber-500" />
-            </div>
-
-            {revenueLoading ? (
-              <div
-                className="h-[320px] animate-pulse rounded-xl"
-                style={{ background: "var(--border)" }}
-              />
-            ) : (
+            <PanelHeader
+              title="Sales Forecast"
+              subtitle="Expected sales performance"
+              icon={TrendingUp}
+              iconClass="text-amber-500"
+            />
+            {forecastLoading ? (
+              <ChartSkeleton />
+            ) : forecastRows.length ? (
               <ChartWidget
                 type="apex-area"
                 title=""
-                data={forecastData?.data || []}
+                data={forecastRows}
                 dataKey="forecast"
                 xKey="month"
-                height={320}
+                height={300}
                 color="#f59e0b"
                 formatter={(v) => formatCurrency(v)}
               />
+            ) : (
+              <div className="py-12 text-center text-[13px]" style={{ color: "var(--text-muted)" }}>
+                No forecast data available.
+              </div>
             )}
           </div>
 
-          {/* Pipeline by Stage */}
           <div
-            className="card p-6 rounded-2xl shadow-sm border"
+            className="card p-4 sm:p-6 rounded-2xl shadow-sm border"
             style={{ borderColor: "var(--border)" }}
           >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3
-                  className="text-lg font-semibold"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  Pipeline by Stage
-                </h3>
-
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  Current opportunity pipeline
-                </p>
+            <PanelHeader
+              title="Pipeline by Stage"
+              subtitle="Current opportunity pipeline"
+              icon={Target}
+              iconClass="text-purple-500"
+            />
+            {pipeline.length ? (
+              <div className="space-y-4">
+                {pipeline.map((stage, index) => (
+                  <ProgressRow
+                    key={index}
+                    label={stage.name}
+                    valueText={formatCurrency(stage.value)}
+                    percent={stage.percent}
+                    barColor="var(--primary)"
+                  />
+                ))}
               </div>
-
-              <Target size={22} className="text-purple-500" />
-            </div>
-
-            <div className="space-y-4">
-              {(Array.isArray(data?.pipeline) ? data.pipeline : []).map(
-                (stage, index) => (
-                  <div key={index}>
-                    <div className="flex justify-between items-center mb-1">
-                      <span
-                        className="text-sm font-medium"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {stage.name}
-                      </span>
-
-                      <span
-                        className="text-sm"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {formatCurrency(stage.value)}
-                      </span>
-                    </div>
-
-                    <div
-                      className="w-full h-2 rounded-full"
-                      style={{ background: "var(--border)" }}
-                    >
-                      <div
-                        className="h-2 rounded-full"
-                        style={{
-                          width: `${stage.percent}%`,
-                          background: "var(--primary)",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ),
-              )}
-
-              {(!data?.pipeline || data.pipeline.length === 0) && (
-                <div
-                  className="text-center py-10"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  No pipeline data available.
-                </div>
-              )}
-            </div>
+            ) : (
+              <div className="text-center py-10 text-[13px]" style={{ color: "var(--text-muted)" }}>
+                No pipeline data available.
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Lead Sources */}
+        {/* ================= LEAD SOURCES ================= */}
         <div
-          className="card p-6 rounded-2xl shadow-sm border"
+          className="card p-4 sm:p-6 rounded-2xl shadow-sm border"
           style={{ borderColor: "var(--border)" }}
         >
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h3
-                className="text-lg font-semibold"
-                style={{ color: "var(--text-primary)" }}
-              >
-                Lead Sources
-              </h3>
-
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                Leads generated from different channels
-              </p>
-            </div>
-
-            <Users size={22} className="text-indigo-500" />
-          </div>
-
-          {Array.isArray(data?.leadSources) && data.leadSources.length > 0 ? (
-            <div className="space-y-5">
-              {data.leadSources.map((source, index) => (
-                <div key={index}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {source.source}
-                    </span>
-
-                    <span
-                      className="text-sm font-semibold"
-                      style={{ color: "var(--text-secondary)" }}
-                    >
-                      {source.count} Leads
-                    </span>
-                  </div>
-
-                  <div
-                    className="w-full h-2 rounded-full"
-                    style={{ background: "var(--border)" }}
-                  >
-                    <div
-                      className="h-2 rounded-full bg-green-500 transition-all"
-                      style={{
-                        width: `${source.percent}%`,
-                      }}
-                    />
-                  </div>
-                </div>
+          <PanelHeader
+            title="Lead Sources"
+            subtitle="Leads generated from different channels"
+            icon={Users}
+            iconClass="text-indigo-500"
+          />
+          {leadSources.length ? (
+            <div className="space-y-4 sm:space-y-5">
+              {leadSources.map((source, index) => (
+                <ProgressRow
+                  key={index}
+                  label={source.source}
+                  valueText={`${source.count} Leads`}
+                  percent={source.percent}
+                  barColor="var(--success)"
+                />
               ))}
             </div>
           ) : (
-            <div
-              className="py-12 text-center"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <div className="py-12 text-center text-[13px]" style={{ color: "var(--text-muted)" }}>
               No lead source data available.
             </div>
           )}

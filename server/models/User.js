@@ -44,6 +44,20 @@ User.init(
     },
 
     phone: { type: DataTypes.STRING },
+
+    phone: {
+      type: DataTypes.STRING,
+    },
+
+    avatar: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
     isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
     isVerified: {
       type: DataTypes.BOOLEAN,

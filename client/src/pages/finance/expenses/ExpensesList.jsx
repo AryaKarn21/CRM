@@ -1,11 +1,10 @@
-import { useState ,useRef} from "react";
+import { useState } from "react";
 
 import ExpenseFilters from "@/components/finance/ExpenseFilters";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, Download, Upload } from "lucide-react";
 import { financeAPI } from "@/api/finance.api";
 import DataTable from "@/components/shared/DataTable";
-import FilterBar from "@/components/shared/FilterBar";
 import Badge from "@/components/ui/Badge";
 import FormModal from "@/components/shared/FormModal";
 import { useForm } from "react-hook-form";
@@ -17,28 +16,14 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
 const EXPENSE_CATEGORIES = [
-  "Travel",
-  "Office Supplies",
-  "Software",
-  "Marketing",
-  "Utilities",
-  "Salaries",
-  "Rent",
-  "Other",
+  "Travel", "Office Supplies", "Software", "Marketing",
+  "Utilities", "Salaries", "Rent", "Other",
 ];
 
 export default function ExpensesList() {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [status, setStatus] = useState("");
   const queryClient = useQueryClient();
-  const [params, setParams] = useState({
-    page: 1,
-    limit: 20,
-    search: "",
-    category: "",
-  });
+  const [params, setParams] = useState({ page: 1, limit: 20, search: "", category: "", status: "" });
   const [modalOpen, setModalOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery({
@@ -46,55 +31,19 @@ export default function ExpensesList() {
     queryFn: () => financeAPI.getExpenses(params).then((r) => r.data),
   });
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(expenseSchema),
     defaultValues: { date: new Date().toISOString().split("T")[0] },
   });
 
-const fileInputRef = useRef(null);
-
-  const handleExport = async () => {
-    try {
-      const res = await employeesAPI.exportEmployees({
-        department: params.department,
-        status: params.status,
-      });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `employees-${Date.now()}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch {
-      toast.error("Export failed");
-    }
+  // ── Real stats, computed from actual data — no more hardcoded numbers ──
+  const expenseList = data?.expenses || [];
+  const stats = {
+    totalExpense: expenseList.reduce((sum, e) => sum + Number(e.amount || 0), 0),
+    pending: expenseList.filter((e) => e.status === "pending").length,
+    approved: expenseList.filter((e) => e.status === "approved").length,
+    rejected: expenseList.filter((e) => e.status === "rejected").length,
   };
-
-  const importMutation = useMutation({
-    mutationFn: (formData) => employeesAPI.importEmployees(formData).then((r) => r.data),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["employees"] });
-      toast.success(`Imported: ${data.created} created, ${data.skipped} skipped, ${data.failed} failed`);
-    },
-    onError: (err) => toast.error(err?.response?.data?.message || "Import failed"),
-  });
-
-  const handleImportFile = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("file", file);
-    importMutation.mutate(formData);
-    e.target.value = ""; // allow re-importing the same file
-  };
-
 
   const createMutation = useMutation({
     mutationFn: financeAPI.createExpense,
@@ -104,6 +53,7 @@ const fileInputRef = useRef(null);
       reset();
       toast.success("Expense recorded");
     },
+    onError: (err) => toast.error(err?.response?.data?.message || "Failed to create expense"),
   });
 
   const deleteMutation = useMutation({
@@ -112,95 +62,75 @@ const fileInputRef = useRef(null);
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       toast.success("Expense deleted");
     },
+    onError: (err) => toast.error(err?.response?.data?.message || "Failed to delete expense"),
   });
 
-  const statusColors = {
-    Approved: "success",
-    Pending: "warning",
-    Rejected: "danger",
+  // ── Export / Import ──────────────────────────────────
+  const handleExport = async () => {
+    try {
+      const res = await financeAPI.exportData("expenses");
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `expenses-${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Export failed");
+    }
   };
 
+  const handleImportFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await financeAPI.importData("expenses", formData);
+      toast.success(
+        `Imported: ${res.data.created} created, ${res.data.skipped} skipped, ${res.data.failed} failed`
+      );
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Import failed");
+    }
+    e.target.value = "";
+  };
+
+  const statusColors = { approved: "success", pending: "warning", rejected: "danger" };
+
   const columns = [
+    { key: "date", label: "Date", sortable: true, render: (val) => formatDate(val) },
     {
-      key: "date",
-      label: "Date",
-      sortable: true,
-      render: (val) => formatDate(val),
-    },
-    {
-      key: "title",
-      label: "Title",
+      key: "title", label: "Title",
       render: (val, row) => (
         <div>
-          <p
-            className="text-[13px] font-medium"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {val}
-          </p>
-          {row.description && (
-            <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-              {row.description}
-            </p>
-          )}
+          <p className="text-[13px] font-medium" style={{ color: "var(--text-primary)" }}>{val}</p>
+          {row.description && <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>{row.description}</p>}
         </div>
       ),
     },
+    { key: "category", label: "Category", render: (val) => <Badge variant="gray">{val}</Badge> },
     {
-      key: "category",
-      label: "Category",
-      render: (val) => <Badge variant="gray">{val}</Badge>,
+      key: "amount", label: "Amount", sortable: true,
+      render: (val) => <span className="font-semibold text-red-600">{formatCurrency(val)}</span>,
     },
     {
-      key: "amount",
-      label: "Amount",
-      sortable: true,
-      render: (val) => (
-        <span className="font-semibold text-red-600">
-          {formatCurrency(val)}
-        </span>
-      ),
+      key: "status", label: "Status",
+      render: (val = "pending") => <Badge variant={statusColors[val] || "warning"} dot>{val}</Badge>,
     },
+    { key: "submittedBy", label: "Submitted By", render: (val) => (val ? val.name || val.email || "—" : "—") },
     {
-      key: "status",
-      label: "Status",
-      render: (val = "Pending") => (
-        <Badge variant={statusColors[val] || "warning"} dot>
-          {val}
-        </Badge>
-      ),
-    },
-    {
-      key: "submittedBy",
-      label: "Submitted By",
-      render: (val) => (val ? val.name || val.email || "—" : "—"),
-    },
-    {
-      key: "id",
-      label: "Actions",
+      key: "id", label: "Actions",
       render: (id) => (
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => navigate(`/finance/expenses/${id}`)}
-          >
-            View
-          </button>
-
-          <button
-            className="btn btn-ghost btn-sm"
-            onClick={() => navigate(`/finance/expenses/${id}/edit`)}
-          >
-            Edit
-          </button>
-
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/finance/expenses/${id}`)}>View</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/finance/expenses/${id}/edit`)}>Edit</button>
           <button
             className="btn btn-ghost btn-sm text-red-500"
-            onClick={() => {
-              if (confirm("Delete this expense?")) {
-                deleteMutation.mutate(id);
-              }
-            }}
+            onClick={() => { if (confirm("Delete this expense?")) deleteMutation.mutate(id); }}
           >
             Delete
           </button>
@@ -213,54 +143,38 @@ const fileInputRef = useRef(null);
     <div className="animate-fade-in">
       <div className="page-header">
         <div>
-          <h1
-            className="text-[18px] font-bold"
-            style={{ color: "var(--text-primary)" }}
-          >
-            Expenses
-          </h1>
-          <p
-            className="text-[12px] mt-0.5"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {data?.total ?? 0} records
-          </p>
+          <h1 className="text-[18px] font-bold" style={{ color: "var(--text-primary)" }}>Expenses</h1>
+          <p className="text-[12px] mt-0.5" style={{ color: "var(--text-muted)" }}>{data?.total ?? 0} records</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
-          <Plus size={14} /> Add Expense
-        </button>
+
+        <div className="flex items-center gap-2">
+          <button className="btn btn-secondary" onClick={handleExport}>
+            <Download size={14} /> Export CSV
+          </button>
+          <label className="btn btn-secondary cursor-pointer">
+            <Upload size={14} /> Import CSV
+            <input type="file" accept=".csv" hidden onChange={handleImportFile} />
+          </label>
+          <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
+            <Plus size={14} /> Add Expense
+          </button>
+        </div>
       </div>
+
       <ExpenseStats
-        totalExpense={245000}
-        pending={18}
-        approved={145}
-        rejected={12}
+        totalExpense={stats.totalExpense}
+        pending={stats.pending}
+        approved={stats.approved}
+        rejected={stats.rejected}
       />
+
       <ExpenseFilters
         search={params.search}
-        setSearch={(value) =>
-          setParams((p) => ({
-            ...p,
-            page: 1,
-            search: value,
-          }))
-        }
+        setSearch={(value) => setParams((p) => ({ ...p, page: 1, search: value }))}
         category={params.category}
-        setCategory={(value) =>
-          setParams((p) => ({
-            ...p,
-            page: 1,
-            category: value,
-          }))
-        }
-        status={params.status || ""}
-        setStatus={(value) =>
-          setParams((p) => ({
-            ...p,
-            page: 1,
-            status: value,
-          }))
-        }
+        setCategory={(value) => setParams((p) => ({ ...p, page: 1, category: value }))}
+        status={params.status}
+        setStatus={(value) => setParams((p) => ({ ...p, page: 1, status: value }))}
         onAddExpense={() => setModalOpen(true)}
       />
 
@@ -281,10 +195,7 @@ const fileInputRef = useRef(null);
 
       <FormModal
         open={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-          reset();
-        }}
+        onClose={() => { setModalOpen(false); reset(); }}
         title="Record Expense"
         onSubmit={handleSubmit((d) => createMutation.mutate(d))}
         loading={createMutation.isPending}
@@ -293,64 +204,32 @@ const fileInputRef = useRef(null);
         <div className="flex flex-col gap-4">
           <div className="form-group">
             <label className="form-label">Title *</label>
-            <input
-              className="input"
-              placeholder="e.g. Office supplies purchase"
-              {...register("title")}
-            />
-            {errors.title && (
-              <p className="text-[11px] text-red-500">{errors.title.message}</p>
-            )}
+            <input className="input" placeholder="e.g. Office supplies purchase" {...register("title")} />
+            {errors.title && <p className="text-[11px] text-red-500">{errors.title.message}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="form-group">
               <label className="form-label">Amount (NPR) *</label>
-              <input
-                className="input"
-                type="number"
-                step="0.01"
-                {...register("amount")}
-              />
-              {errors.amount && (
-                <p className="text-[11px] text-red-500">
-                  {errors.amount.message}
-                </p>
-              )}
+              <input className="input" type="number" step="0.01" {...register("amount")} />
+              {errors.amount && <p className="text-[11px] text-red-500">{errors.amount.message}</p>}
             </div>
             <div className="form-group">
               <label className="form-label">Category *</label>
               <select className="input" {...register("category")}>
                 <option value="">Select category</option>
-                {EXPENSE_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
+                {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              {errors.category && (
-                <p className="text-[11px] text-red-500">
-                  {errors.category.message}
-                </p>
-              )}
+              {errors.category && <p className="text-[11px] text-red-500">{errors.category.message}</p>}
             </div>
             <div className="form-group">
               <label className="form-label">Date *</label>
               <input className="input" type="date" {...register("date")} />
-              {errors.date && (
-                <p className="text-[11px] text-red-500">
-                  {errors.date.message}
-                </p>
-              )}
+              {errors.date && <p className="text-[11px] text-red-500">{errors.date.message}</p>}
             </div>
           </div>
           <div className="form-group">
             <label className="form-label">Description</label>
-            <textarea
-              className="input"
-              rows={3}
-              placeholder="Additional details..."
-              {...register("description")}
-            />
+            <textarea className="input" rows={3} placeholder="Additional details..." {...register("description")} />
           </div>
         </div>
       </FormModal>

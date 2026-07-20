@@ -25,6 +25,7 @@ import {
   AlertCircle,
   FileText,
   ClipboardList,
+  Download,
 } from "lucide-react";
 
 import { employeesAPI } from "@/api/employees.api";
@@ -286,6 +287,24 @@ export default function EmployeeDetail() {
     onError: (err) => toast.error(err?.response?.data?.message || "Failed to remove report"),
   });
 
+  // ── Full-history CSV export ───────────────────────────────
+  const handleExport = async () => {
+    try {
+      const res = await employeesAPI.exportFullHistory(id);
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${employee.firstName}-${employee.lastName}-full-history.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Full history exported");
+    } catch {
+      toast.error("Export failed");
+    }
+  };
+
   // ── Loading / not-found ──────────────────────────────────
   if (isLoading) {
     return (
@@ -351,12 +370,12 @@ export default function EmployeeDetail() {
 
   return (
     <div className="animate-fade-in" style={{ background: "var(--bg)" }}>
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* ================= HEADER ================= */}
         <div className="card">
-          <div className="p-6">
-            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-              <div className="flex items-start gap-5">
+          <div className="p-4 sm:p-6">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 sm:gap-6">
+              <div className="flex items-start gap-3 sm:gap-5">
                 <button
                   onClick={() => navigate("/hr/employees")}
                   className="btn btn-secondary btn-icon shrink-0"
@@ -371,9 +390,9 @@ export default function EmployeeDetail() {
                   size="xl"
                 />
 
-                <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="text-[26px] font-bold" style={{ color: "var(--text-primary)" }}>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <h1 className="text-xl sm:text-2xl xl:text-[26px] font-bold break-words" style={{ color: "var(--text-primary)" }}>
                       {employee.firstName} {employee.lastName}
                     </h1>
                     <Badge variant={classifyStatus(employee.status)} dot>
@@ -381,12 +400,12 @@ export default function EmployeeDetail() {
                     </Badge>
                   </div>
 
-                  <p className="mt-1 text-[13px]" style={{ color: "var(--text-muted)" }}>
+                  <p className="mt-1 text-[12px] sm:text-[13px]" style={{ color: "var(--text-muted)" }}>
                     {employee.designation || "—"} • {employee.department || "—"}
                   </p>
 
                   <div
-                    className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-[12px]"
+                    className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-2 mt-3 sm:mt-4 text-[12px]"
                     style={{ color: "var(--text-secondary)" }}
                   >
                     <span className="flex items-center gap-1.5">
@@ -408,13 +427,23 @@ export default function EmployeeDetail() {
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <a href={`mailto:${employee.email}`} className="btn btn-secondary">
+              {/* Buttons: stretch + wrap on mobile, natural width on desktop */}
+              <div className="flex flex-wrap gap-2 sm:gap-3">
+                <button
+                  onClick={handleExport}
+                  className="btn btn-secondary flex items-center justify-center gap-2 flex-1 xl:flex-none"
+                >
+                  <Download size={16} /> Export History
+                </button>
+                <a
+                  href={`mailto:${employee.email}`}
+                  className="btn btn-secondary flex-1 xl:flex-none text-center"
+                >
                   Send Email
                 </a>
                 <button
                   onClick={() => navigate(`/hr/employees/${employee.id}/edit`)}
-                  className="btn btn-primary"
+                  className="btn btn-primary flex-1 xl:flex-none"
                 >
                   Edit Employee
                 </button>
@@ -424,17 +453,17 @@ export default function EmployeeDetail() {
         </div>
 
         {/* ================= MAIN CONTENT ================= */}
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 sm:gap-6">
           {/* ================= LEFT ================= */}
           <div className="xl:col-span-3">
             <div className="card">
               <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {/* ================= OVERVIEW ================= */}
                 {activeTab === "overview" && (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                       <StatCard
                         title="Attendance"
                         value={`${stats?.attendance?.attendancePercentage ?? 0}%`}
@@ -462,7 +491,7 @@ export default function EmployeeDetail() {
                     </div>
 
                     <SectionCard title="Basic Information">
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6">
                         <Field label="First Name" value={employee.firstName} icon={<User size={13} />} />
                         <Field label="Last Name" value={employee.lastName} icon={<User size={13} />} />
                         <Field label="Email" value={employee.email} icon={<Mail size={13} />} />
@@ -476,7 +505,7 @@ export default function EmployeeDetail() {
                     </SectionCard>
 
                     <SectionCard title="Personal Information">
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6">
                         <Field label="Date of Birth" value={employee.dateOfBirth ? formatDate(employee.dateOfBirth) : "—"} />
                         <Field label="Gender" value={employee.gender} />
                         <Field label="Marital Status" value={employee.maritalStatus} />
@@ -487,7 +516,7 @@ export default function EmployeeDetail() {
                     </SectionCard>
 
                     <SectionCard title="Address">
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6">
                         <Field label="Address" value={employee.address} icon={<MapPin size={13} />} />
                         <Field label="City" value={employee.city} />
                         <Field label="State" value={employee.state} />
@@ -497,14 +526,14 @@ export default function EmployeeDetail() {
                     </SectionCard>
 
                     <SectionCard title="Emergency Contact">
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6">
                         <Field label="Contact Name" value={employee.emergencyContactName} />
                         <Field label="Contact Phone" value={employee.emergencyPhone} />
                       </div>
                     </SectionCard>
 
                     <SectionCard title="Employment">
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6">
                         <Field label="Employment Type" value={employee.employmentType} />
                         <Field label="Shift" value={employee.shift?.name} icon={<Clock size={13} />} />
                         <Field label="Reporting Manager" value={managerName} icon={<Users size={13} />} />
@@ -518,7 +547,7 @@ export default function EmployeeDetail() {
                 {/* ================= ATTENDANCE ================= */}
                 {activeTab === "attendance" && (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                       <StatCard title="Attendance %" value={`${stats?.attendance?.attendancePercentage ?? 0}%`} icon={CheckCircle2} color="success" />
                       <StatCard title="Present Days" value={stats?.attendance?.present ?? 0} icon={CheckCircle2} color="info" />
                       <StatCard title="Absent Days" value={stats?.attendance?.absent ?? 0} icon={XCircle} color="danger" />
@@ -584,7 +613,7 @@ export default function EmployeeDetail() {
                 {/* ================= LEAVE HISTORY ================= */}
                 {activeTab === "leaves" && (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                       <StatCard title="Total Leaves" value={stats?.leave?.total ?? 0} icon={Calendar} color="primary" />
                       <StatCard title="Approved" value={stats?.leave?.approved ?? 0} icon={CheckCircle2} color="success" />
                       <StatCard title="Pending" value={stats?.leave?.pending ?? 0} icon={AlertCircle} color="warning" />
@@ -684,7 +713,7 @@ export default function EmployeeDetail() {
                 {/* ================= SALARY ================= */}
                 {activeTab === "salary" && (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                       <StatCard title={`Basic (${employee.salaryType || "Monthly"})`} value={formatCurrency(employee.salary)} icon={Wallet} color="primary" />
                       <StatCard title="Allowances" value={formatCurrency(employee.allowances || 0)} icon={Wallet} color="info" />
                       <StatCard title="Bonus" value={formatCurrency(employee.bonus || 0)} icon={Wallet} color="success" />
@@ -696,7 +725,7 @@ export default function EmployeeDetail() {
                     </div>
 
                     <SectionCard title="Bank & Payment Details">
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6">
                         <Field label="Bank Name" value={employee.bankName} />
                         <Field label="Account Holder" value={employee.accountHolderName} />
                         <Field label="Account Number" value={employee.bankAccountNumber} />
@@ -707,7 +736,7 @@ export default function EmployeeDetail() {
                     </SectionCard>
 
                     <SectionCard title="Government / Tax Identifiers">
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 p-4 sm:p-6">
                         <Field label="PAN / Tax Number" value={employee.panTaxNumber} />
                         <Field label="PF Number" value={employee.pfNumber} />
                         <Field label="ESI Number" value={employee.esiNumber} />
@@ -1015,7 +1044,7 @@ export default function EmployeeDetail() {
                         ))
                       ) : (
                         <div className="card p-10 text-center" style={{ color: "var(--text-muted)" }}>
-                          No performance reviews recorded yet. Click "New Review" to add the first one.
+                          No performance reviews recorded yet. Click “New Review” to add the first one.
                         </div>
                       )}
                     </div>
@@ -1024,7 +1053,7 @@ export default function EmployeeDetail() {
 
                 {/* ================= TIMELINE ================= */}
                 {activeTab === "timeline" && (
-                  <div className="card p-6">
+                  <div className="card p-5 sm:p-6">
                     <h2 className="text-[15px] font-semibold mb-6" style={{ color: "var(--text-primary)" }}>
                       Employee Activity Timeline
                     </h2>
@@ -1080,7 +1109,7 @@ export default function EmployeeDetail() {
 
           {/* ================= RIGHT SIDEBAR ================= */}
           <div className="space-y-6">
-            <div className="card p-6">
+            <div className="card p-5 sm:p-6">
               <h2 className="text-[14px] font-semibold mb-5" style={{ color: "var(--text-primary)" }}>
                 Employee Summary
               </h2>
@@ -1094,7 +1123,7 @@ export default function EmployeeDetail() {
               </div>
             </div>
 
-            <div className="card p-6">
+            <div className="card p-5 sm:p-6">
               <h2 className="text-[14px] font-semibold mb-5" style={{ color: "var(--text-primary)" }}>
                 Contact
               </h2>
@@ -1105,7 +1134,7 @@ export default function EmployeeDetail() {
               </div>
             </div>
 
-            <div className="card p-6">
+            <div className="card p-5 sm:p-6">
               <h2 className="text-[14px] font-semibold mb-5" style={{ color: "var(--text-primary)" }}>
                 Statistics
               </h2>

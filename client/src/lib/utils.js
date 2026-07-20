@@ -55,6 +55,22 @@ export function classifyStatus(status) {
     active: 'success', open: 'info', closed: 'gray', won: 'success',
     lost: 'danger', pending: 'warning', approved: 'success',
     rejected: 'danger', new: 'info', inprogress: 'warning',
+    on_leave: 'warning', inactive: 'gray', terminated: 'danger',
+    suspended: 'danger', half_day: 'warning', present: 'success',
+    absent: 'danger', late: 'warning', draft: 'gray', paid: 'success',
+    unpaid: 'danger', probation: 'info',
   }
   return map[status?.toLowerCase()] || 'gray'
+}
+
+// Turn snake_case / camelCase status values into readable labels ("on_leave" -> "On Leave")
+export function formatStatusLabel(status) {
+  if (!status) return '—'
+  return String(status)
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ')
 }

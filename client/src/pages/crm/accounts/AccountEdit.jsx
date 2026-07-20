@@ -28,9 +28,9 @@ export default function AccountEdit() {
       website: "",
       email: "",
       phone: "",
-      address: "",
+      billingStreet: "",
       type: "",
-      revenue: 0,
+      annualRevenue: 0,
       employees: "",
       assignedToId: "",
     },
@@ -63,23 +63,30 @@ export default function AccountEdit() {
       website: account.website || "",
       email: account.email || "",
       phone: account.phone || "",
-      address: account.address || "",
+      billingStreet: account.billingStreet || "",
       type: account.type || "",
-      revenue: account.revenue || 0,
+      annualRevenue: account.annualRevenue || 0,
       employees: account.employees || "",
       assignedToId: account.assignedToId || "",
     });
   }, [account, reset]);
 
   const updateMutation = useMutation({
-    mutationFn: (data) =>
-      accountsAPI.update(id, {
-        ...data,
-        revenue: Number(data.revenue || 0),
+    mutationFn: (data) => {
+      // Sequelize validators (isEmail) reject "" but accept null,
+      // so blank optional fields must be sent as null.
+      const clean = {};
+      for (const [key, value] of Object.entries(data)) {
+        clean[key] = value === "" ? null : value;
+      }
+
+      return accountsAPI.update(id, {
+        ...clean,
+        annualRevenue: Number(data.annualRevenue || 0),
         employees: data.employees ? Number(data.employees) : null,
         assignedToId: data.assignedToId || null,
-      }),
-
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["accounts"],
@@ -181,7 +188,7 @@ export default function AccountEdit() {
           <div className="form-group">
             <label>Revenue</label>
 
-            <input type="number" className="input" {...register("revenue")} />
+            <input type="number" className="input" {...register("annualRevenue")} />
           </div>
 
           <div className="form-group">
@@ -207,15 +214,12 @@ export default function AccountEdit() {
           <div className="form-group md:col-span-2">
             <label>Address</label>
 
-            <textarea rows={3} className="input" {...register("address")} />
+            <textarea rows={3} className="input" {...register("billingStreet")} />
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:justify-end gap-3 mt-2">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-          >
+          <button type="button" onClick={() => navigate(-1)}>
             Cancel
           </button>
 

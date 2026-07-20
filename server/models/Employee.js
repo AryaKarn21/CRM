@@ -27,6 +27,19 @@ Employee.init(
         isEmail: true,
       },
     },
+   
+   email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        isEmailOrBlank(value) {
+          if (value === null || value === "") return;
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            throw new Error("Must be a valid email address");
+          }
+        },
+      },
+    },
 
     
     phone: { type: DataTypes.STRING },

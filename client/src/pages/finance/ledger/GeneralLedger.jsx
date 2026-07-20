@@ -1,25 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-import { financeAPI } from "@/api/finance.api";
-import DataTable from "@/components/shared/DataTable";
-import FilterBar from "@/components/shared/FilterBar";
-import FormModal from "@/components/shared/FormModal";
-import Badge from "@/components/ui/Badge";
-import { formatDate, formatCurrency } from "@/lib/utils";
-import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import LedgerHeader from "./LedgerHeader";
+import { financeAPI } from "@/api/finance.api";
 
-const ACCOUNTS = [
-  "Cash",
-  "Accounts Receivable",
-  "Revenue",
-  "Salaries",
-  "Rent",
-  "Office Supplies",
-  "Other",
-];
+import LedgerHeader from "./LedgerHeader";
+import LedgerFilters from "./LedgerFilters";
+import LedgerSummary from "./LedgerSummary";
+import LedgerTable from "./LedgerTable";
+import LedgerModal from "./LedgerModal";
+import LedgerDtails from "./LedgerDtails";
 
 export default function GeneralLedger() {
   const queryClient = useQueryClient();
@@ -30,241 +19,114 @@ export default function GeneralLedger() {
     type: "",
   });
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null); // entry being edited, or null = "add" mode
+  const [selectedEntry, setSelectedEntry] = useState(null); // entry shown in the details panel
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["ledger", params],
     queryFn: () => financeAPI.getLedgerEntries(params).then((r) => r.data),
   });
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    formState: { errors },
-  } = useForm({
-    defaultValues: {
-      date: new Date().toISOString().split("T")[0],
-      type: "debit",
-      debit: "",
-      credit: "",
-      description: "",
-      reference: "",
-      account: "",
-    },
-  });
-
-  const entryType = watch("type");
+  // The /finance/ledger endpoint returns { entries, total }. Guard against
+  // any legacy/bare-array response shape so this never crashes again.
+  const entries = Array.isArray(data) ? data : data?.entries || [];
+  const total = Array.isArray(data)
+    ? entries.length
+    : (data?.total ?? entries.length);
 
   const createMutation = useMutation({
     mutationFn: financeAPI.createEntry,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ledger"] });
-      setModalOpen(false);
-      reset();
+      closeModal();
       toast.success("Ledger entry created");
     },
     onError: (err) =>
       toast.error(err?.response?.data?.message || "Failed to create entry"),
   });
 
-  const columns = [
-    {
-      key: "date",
-      label: "Date",
-      sortable: true,
-      render: (val) => formatDate(val),
+  const updateMutation = useMutation({
+    mutationFn: ({ id, values }) => financeAPI.updateEntry(id, values),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ledger"] });
+      closeModal();
+      toast.success("Ledger entry updated");
     },
-    {
-      key: "reference",
-      label: "Reference",
-      render: (val) => (
-        <span className="font-mono text-[12px]">{val || "—"}</span>
-      ),
+    onError: (err) =>
+      toast.error(err?.response?.data?.message || "Failed to update entry"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => financeAPI.deleteEntry(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ledger"] });
+      toast.success("Ledger entry deleted");
     },
-    {
-      key: "description",
-      label: "Description",
-      render: (val) => <span className="text-[13px]">{val}</span>,
-    },
-    {
-      key: "account",
-      label: "Account",
-      render: (val) => val?.name || val || "—",
-    },
-    {
-      key: "type",
-      label: "Type",
-      render: (val) => (
-        <Badge variant={val === "debit" ? "danger" : "success"}>{val}</Badge>
-      ),
-    },
-    {
-      key: "debit",
-      label: "Debit",
-      render: (val) =>
-        val ? (
-          <span className="font-medium text-red-600">
-            {formatCurrency(val)}
-          </span>
-        ) : (
-          "—"
-        ),
-    },
-    {
-      key: "credit",
-      label: "Credit",
-      render: (val) =>
-        val ? (
-          <span className="font-medium text-green-600">
-            {formatCurrency(val)}
-          </span>
-        ) : (
-          "—"
-        ),
-    },
-    {
-      key: "balance",
-      label: "Balance",
-      render: (val) =>
-        val != null ? (
-          <span className="font-semibold">{formatCurrency(val)}</span>
-        ) : (
-          "—"
-        ),
-    },
-  ];
+    onError: (err) =>
+      toast.error(err?.response?.data?.message || "Failed to delete entry"),
+  });
+
+  const openAddModal = () => {
+    setEditingEntry(null);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (entry) => {
+    setEditingEntry(entry);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingEntry(null);
+  };
+
+  const handleModalSubmit = (values) => {
+    if (editingEntry) {
+      updateMutation.mutate({ id: editingEntry.id, values });
+    } else {
+      createMutation.mutate(values);
+    }
+  };
 
   return (
     <div className="animate-fade-in">
-      <LedgerHeader
-        onAdd={() => setModalOpen(true)}
-        onImport={() => {
-          toast("Import feature coming soon");
-        }}
-        onExport={() => {
-          toast("Export feature coming soon");
-        }}
-        onPrint={() => window.print()}
-      />
+      <LedgerHeader total={total} onAddEntry={openAddModal} />
 
-      <FilterBar
-        searchPlaceholder="Search by description, reference..."
-        filters={[
-          {
-            key: "type",
-            label: "Type",
-            options: ["debit", "credit"].map((v) => ({ label: v, value: v })),
-          },
-        ]}
+      <LedgerFilters
         values={params}
         onChange={(k, v) => setParams((p) => ({ ...p, [k]: v, page: 1 }))}
       />
 
-      <div className="mx-6 mb-6 card overflow-hidden">
-        <DataTable
-          columns={columns}
-          data={data?.entries || []}
-          total={data?.total || 0}
-          page={params.page}
-          pageSize={params.limit}
-          loading={isLoading}
-          error={error}
-          onPageChange={(page) => setParams((p) => ({ ...p, page }))}
-          emptyTitle="No ledger entries"
-          emptyDescription="Add your first entry to start tracking finances"
-        />
-      </div>
+      <LedgerSummary entries={entries} />
 
-      <FormModal
+      <LedgerTable
+        entries={entries}
+        total={total}
+        page={params.page}
+        pageSize={params.limit}
+        loading={isLoading}
+        error={error}
+        onPageChange={(page) => setParams((p) => ({ ...p, page }))}
+        onView={(row) => setSelectedEntry(row)}
+        onEdit={openEditModal}
+        onDelete={(id) => deleteMutation.mutate(id)}
+      />
+
+      <LedgerModal
         open={modalOpen}
-        onClose={() => {
-          setModalOpen(false);
-          reset();
-        }}
-        title="Add Ledger Entry"
-        onSubmit={handleSubmit((d) => {
-          const amount = parseFloat(d.type === "debit" ? d.debit : d.credit);
-          createMutation.mutate({
-            ...d,
-            debit: d.type === "debit" ? amount : 0,
-            credit: d.type === "credit" ? amount : 0,
-          });
-        })}
-        loading={createMutation.isPending}
-        submitLabel="Add Entry"
-      >
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="form-group">
-              <label className="form-label">Type *</label>
-              <select
-                className="input"
-                {...register("type", { required: true })}
-              >
-                <option value="debit">Debit</option>
-                <option value="credit">Credit</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Amount (NPR) *</label>
-              <input
-                className="input"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...register(entryType === "debit" ? "debit" : "credit", {
-                  required: true,
-                  min: 0.01,
-                })}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Date *</label>
-              <input
-                className="input"
-                type="date"
-                {...register("date", { required: true })}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Account</label>
-              <select className="input" {...register("account")}>
-                <option value="">Select account</option>
-                {ACCOUNTS.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group col-span-2">
-              <label className="form-label">Reference</label>
-              <input
-                className="input"
-                placeholder="e.g. INV-001, REC-002"
-                {...register("reference")}
-              />
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Description *</label>
-            <textarea
-              className="input"
-              rows={2}
-              placeholder="What is this entry for?"
-              {...register("description", {
-                required: "Description is required",
-              })}
-            />
-            {errors.description && (
-              <p className="text-[11px] text-red-500">
-                {errors.description.message}
-              </p>
-            )}
-          </div>
-        </div>
-      </FormModal>
+        onClose={closeModal}
+        onSubmit={handleModalSubmit}
+        loading={createMutation.isPending || updateMutation.isPending}
+        entry={editingEntry}
+      />
+
+      <LedgerDtails
+        entry={selectedEntry}
+        onClose={() => setSelectedEntry(null)}
+        onEdit={openEditModal}
+        onDelete={(id) => deleteMutation.mutate(id)}
+      />
     </div>
   );
 }

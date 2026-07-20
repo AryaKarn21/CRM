@@ -9,4 +9,12 @@ export const accountsAPI = {
   getContacts: (id) => api.get(`/accounts/${id}/contacts`),
   getOpportunities: (id) => api.get(`/accounts/${id}/opportunities`),
   getTimeline: (id) => api.get(`/accounts/${id}/timeline`),
+
+  // ── Import / Export ────────────────────────────────────────
+  exportAccounts: (params) =>
+    api.get('/accounts/export', { params, responseType: 'blob' }),
+  importAccounts: (formData) =>
+    api.post('/accounts/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 }

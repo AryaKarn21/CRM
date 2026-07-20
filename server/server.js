@@ -1,6 +1,7 @@
+import "./env.js"; // MUST be the first import — loads .env before anything else touches process.env
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import { sequelize } from "./config/db.js";
 import "./models/index.js"; // registers all associations before sync/queries run
 import path from "path";
@@ -25,14 +26,17 @@ import supportRoutes from "./routes/support.routes.js";
 import reportsRoutes from "./routes/reports.routes.js";
 import settingsRoutes from "./routes/settings.routes.js";
 import rolesRoutes from "./routes/roles.routes.js";
+import auditRoutes from "./routes/audit.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { protect } from "./middleware/auth.js";
 import { resolveCompany } from "./middleware/tenant.js";
 import meetingsRoutes from "./routes/meetings.routes.js";
 import meetingAttendeeRoutes from "./routes/meetingAttendees.routes.js";
-dotenv.config();
 import usersRoutes from "./routes/users.routes.js";
 import notificationsRoutes from "./routes/notifications.routes.js";
+import emailRoutes from "./routes/email.routes.js";
+import { startScheduler } from "./services/scheduler.service.js";
+
 const app = express();
 
 app.use(cors());
@@ -42,12 +46,7 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 app.use("/api/auth", authRoutes);
 
 app.use("/api/meetings", protect, resolveCompany, meetingsRoutes);
-app.use(
-  "/api/meeting-attendees",
-  protect,
-  resolveCompany,
-  meetingAttendeeRoutes,
-);
+app.use("/api/meeting-attendees", protect, resolveCompany, meetingAttendeeRoutes);
 
 app.use("/api/leads", protect, resolveCompany, leadsRoutes);
 app.use("/api/accounts", protect, resolveCompany, accountsRoutes);
@@ -61,7 +60,6 @@ app.use("/api/attendance", protect, resolveCompany, attendanceRoutes);
 app.use("/api/shifts", protect, resolveCompany, shiftRoutes);
 app.use("/api/leaves", protect, resolveCompany, leavesRoutes);
 app.use("/api/payroll", protect, resolveCompany, payrollRoutes);
-//app.use('/api/payroll', protect, resolveCompany, payrollRoutes)
 app.use("/api/finance", protect, resolveCompany, financeRoutes);
 app.use("/api/inventory", protect, resolveCompany, inventoryRoutes);
 app.use("/api/procurement", protect, resolveCompany, procurementRoutes);
@@ -71,10 +69,14 @@ app.use("/api/reports", protect, resolveCompany, reportsRoutes);
 app.use("/api/notifications", protect, resolveCompany, notificationsRoutes);
 app.use("/api/settings", protect, settingsRoutes);
 app.use("/api/roles", protect, resolveCompany, rolesRoutes);
+app.use("/api/audit-logs", protect, resolveCompany, auditRoutes);
+app.use("/api/email", protect, resolveCompany, emailRoutes);
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
+
 async function start() {
   try {
     await sequelize.authenticate();
@@ -84,12 +86,21 @@ async function start() {
     // definitions. This replaces Mongoose's schema-less auto-creation.
     // alter:true updates existing tables to match models in dev; remove
     // alter (or use proper migrations) once the schema stabilizes.
-    //await sequelize.sync({ alter: process.env.NODE_ENV !== 'production' })
+    //
+    // TEMPORARILY ENABLED: Role and AuditLog models just gained new
+    // columns (isActive/isDeleted/deletedAt on Role; module/device/
+    // browser/status on AuditLog). Those tables already exist in the DB
+    // from before, and bare sync() never adds columns to existing
+    // tables — only alter:true actually runs the ALTER TABLE statements
+    // needed to bring the real schema in line with the model. Once this
+    // has run successfully once, switch back to plain sequelize.sync().
     await sequelize.sync();
-    //await sequelize.sync({ alter: true })
     console.log("Database synced");
 
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      startScheduler();
+    });
   } catch (err) {
     console.error("========== ERROR ==========");
     console.error(err);

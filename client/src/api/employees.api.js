@@ -3,9 +3,16 @@ import api from "./axios";
 export const employeesAPI = {
   getAll: (params) => api.get("/employees", { params }),
   getById: (id) => api.get(`/employees/${id}`),
+  getMe: () => api.get("/employees/me"),
   create: (data) => api.post("/employees", data),
   update: (id, data) => api.patch(`/employees/${id}`, data),
   delete: (id) => api.delete(`/employees/${id}`),
+
+  // ── Quick Actions ────────────────────────────────────────────
+  deactivate: (id, status) => api.patch(`/employees/${id}/deactivate`, { status }),
+  assignShift: (id, shiftId) => api.patch(`/employees/${id}/assign-shift`, { shiftId }),
+  assignManager: (id, reportingManagerId) =>
+    api.patch(`/employees/${id}/assign-manager`, { reportingManagerId }),
 
   // ── Sub-resources (Employee Details tabs) ──────────────────
   getDashboardStats: (id) => api.get(`/employees/${id}/dashboard-stats`),
@@ -25,13 +32,17 @@ export const employeesAPI = {
     api.post(`/employees/${id}/documents`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
-   
+
   // ── Daily Reports ──────────────────────────────────────────
   getDailyReports: (id) => api.get(`/employees/${id}/daily-reports`),
   addDailyReport: (id, data) =>
     api.post(`/employees/${id}/daily-reports`, data),
   deleteDailyReport: (id, reportId) =>
     api.delete(`/employees/${id}/daily-reports/${reportId}`),
+
+  // ── Send Email (through the backend mailer) ────────────────
+  sendEmail: (id, data) => api.post(`/employees/${id}/send-email`, data),
+
   // ── Import / Export ────────────────────────────────────────
   exportEmployees: (params) =>
     api.get("/employees/export", { params, responseType: "blob" }),
@@ -39,12 +50,13 @@ export const employeesAPI = {
     api.post("/employees/import", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
+  // Both names point at the same single-employee full-history export
+  exportEmployeeProfile: (id) =>
+    api.get(`/employees/${id}/export`, { responseType: "blob" }),
+  exportFullHistory: (id) =>
+    api.get(`/employees/${id}/export`, { responseType: "blob" }),
 
-    exportEmployeeProfile: (id) =>
-  api.get(`/employees/${id}/export`, {
-    responseType: "blob",
-  }),
-
+  // ── Performance (direct to the endpoint; no cross-import) ──
   updatePerformanceReview: (reviewId, data) =>
-  performanceAPI.update(reviewId, data),
+    api.patch(`/performance/${reviewId}`, data),
 };

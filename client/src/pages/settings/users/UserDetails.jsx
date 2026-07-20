@@ -129,15 +129,19 @@ export default function UserDetails() {
 
         <div className="mt-6">
 
+          {/* FIXED: was checking user.status, which isn't a real column
+              on the User model — only isActive (boolean) exists, so this
+              badge always rendered the 'gray'/fallback state regardless
+              of the user's actual status. */}
           <Badge
             variant={
-              user.status === 'active'
+              user.isActive
                 ? 'success'
                 : 'gray'
             }
             dot
           >
-            {user.status}
+            {user.isActive ? 'Active' : 'Inactive'}
           </Badge>
 
         </div>

@@ -68,6 +68,23 @@ const NAV = [
   { label: 'Settings', icon: Settings, to: '/settings' },
 ]
 
+// Employees must not reach the company-wide directory — swap the
+// "Employees" link for a self-service "My Profile" link for that role.
+function buildNav(role) {
+  return NAV.map((item) => {
+    if (item.label !== 'Human Resources') return item
+    if (role === 'employee') {
+      return {
+        ...item,
+        children: item.children.map((c) =>
+          c.label === 'Employees' ? { label: 'My Profile', to: '/hr/my-profile' } : c
+        ),
+      }
+    }
+    return item
+  })
+}
+
 function NavGroup({ item, collapsed }) {
   const location = useLocation()
   const isActive = item.children?.some(c => location.pathname.startsWith(c.to))
@@ -117,6 +134,7 @@ function NavGroup({ item, collapsed }) {
 export default function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useUIStore()
   const { user } = useAuthStore()
+  const navItems = buildNav(user?.role)
 
   return (
     <aside
@@ -150,7 +168,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-0.5 scrollbar-none">
-        {NAV.map((item) =>
+        {navItems.map((item) =>
           item.children ? (
             <NavGroup key={item.label} item={item} collapsed={sidebarCollapsed} />
           ) : (

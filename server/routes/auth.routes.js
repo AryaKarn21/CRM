@@ -1,12 +1,15 @@
 import express from "express";
 import jwt from "jsonwebtoken";
-import { User, Company, OTP } from "../models/index.js";
+import { User, Company, OTP, Role } from "../models/index.js";
 import { protect } from "../middleware/auth.js";
 import { sendEmail } from "../services/email.services.js";
 import { createOTP, verifyOTP } from "../services/otp.services.js";
 import { loadTemplate } from "../utils/template.js";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 //import { sendEmail } from '../services/email.services.js'
-
+import bcrypt from "bcryptjs";
 const router = express.Router();
 
 const signToken = (id) =>
@@ -62,6 +65,12 @@ router.post("/register", async (req, res) => {
       html,
     });
 
+    const uploadDir = "uploads/avatars";
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
     res.status(201).json({
       success: true,
       message: "Registration successful. Please verify your email.",
@@ -73,6 +82,81 @@ router.post("/register", async (req, res) => {
     res.status(500).json({
       success: false,
       message: err.message,
+    });
+  }
+});
+
+const storage = multer.diskStorage({
+  destination(req, file, cb) {
+    cb(null, uploadDir);
+  },
+
+  filename(req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage,
+});
+
+router.put("/profile", protect, async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      phone,
+      username,
+      alternatePhone,
+      jobTitle,
+      timezone,
+      language,
+    } = req.body;
+
+    const user = await User.findByPk(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (email && email !== user.email) {
+      const existing = await User.findOne({
+        where: { email },
+      });
+
+      if (existing && existing.id !== user.id) {
+        return res.status(400).json({
+          success: false,
+          message: "Email already exists",
+        });
+      }
+    }
+
+    user.name = name ?? user.name;
+    user.email = email ?? user.email;
+    user.phone = phone ?? user.phone;
+    user.username = username ?? user.username;
+    user.alternatePhone = alternatePhone ?? user.alternatePhone;
+    user.jobTitle = jobTitle ?? user.jobTitle;
+    user.timezone = timezone ?? user.timezone;
+    user.language = language ?? user.language;
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "Profile updated successfully",
+      data: user,
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update profile",
     });
   }
 });
@@ -89,7 +173,23 @@ router.post("/login", async (req, res, next) => {
     // Mongoose: User.findOne({ email }).populate('companies')
     const user = await User.findOne({
       where: { email },
-      include: [{ model: Company, as: "companies" }],
+
+      include: [
+        {
+          model: Company,
+          as: "companies",
+        },
+        {
+          model: Role,
+          as: "roleInfo",
+          attributes: ["id", "name", "permissions", "isActive", "isDeleted"],
+        },
+        {
+          model: Role,
+          as: "roleInfo",
+          attributes: ["id", "name", "permissions", "isActive", "isDeleted"],
+        },
+      ],
     });
     if (!user || !(await user.comparePassword(password)))
       return res.status(401).json({ message: "Invalid email or password" });
@@ -113,7 +213,14 @@ router.post("/login", async (req, res, next) => {
         id: user.id,
         name: user.name,
         email: user.email,
+
         role: user.role,
+
+        roleId: user.roleId,
+
+        roleInfo: user.roleInfo,
+
+        permissions: user.roleInfo?.permissions || {},
       },
       companies: user.companies,
     });
@@ -129,6 +236,66 @@ router.get("/me", protect, async (req, res, next) => {
       include: [{ model: Company, as: "companies" }],
     });
     res.json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/auth/profile
+router.put("/profile", protect, async (req, res, next) => {
+  try {
+    const {
+      name,
+      email,
+      phone,
+      dob,
+      gender,
+      address,
+      city,
+      state,
+      country,
+      postalCode,
+    } = req.body;
+
+    const user = await User.findByPk(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    // Prevent duplicate email
+    if (email && email !== user.email) {
+      const exists = await User.findOne({
+        where: { email },
+      });
+
+      if (exists) {
+        return res.status(400).json({
+          message: "Email already exists",
+        });
+      }
+    }
+
+    user.name = name ?? user.name;
+    user.email = email ?? user.email;
+    user.phone = phone ?? user.phone;
+    user.dob = dob ?? user.dob;
+    user.gender = gender ?? user.gender;
+    user.address = address ?? user.address;
+    user.city = city ?? user.city;
+    user.state = state ?? user.state;
+    user.country = country ?? user.country;
+    user.postalCode = postalCode ?? user.postalCode;
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user,
+    });
   } catch (err) {
     next(err);
   }
@@ -359,6 +526,32 @@ router.post("/reset-password", async (req, res) => {
     res.status(500).json({
       success: false,
       message: err.message,
+    });
+  }
+});
+router.post("/avatar", protect, upload.single("avatar"), async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    user.avatar = `/uploads/avatars/${req.file.filename}`;
+
+    await user.save();
+
+    res.json({
+      success: true,
+      avatar: user.avatar,
+    });
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      message: "Upload failed",
     });
   }
 });

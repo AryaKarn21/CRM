@@ -144,6 +144,55 @@ Account.init(
       type: DataTypes.STRING,
     },
 
+  gstNumber: {
+  type: DataTypes.STRING,
+},
+
+panNumber: {
+  type: DataTypes.STRING,
+},
+
+paymentTerms: {
+  type: DataTypes.STRING,
+},
+
+ownership: {
+  type: DataTypes.ENUM(
+    "Private",
+    "Public",
+    "Government",
+    "Partnership",
+    "Non-Profit",
+    "Other"
+  ),
+},
+
+rating: {
+  type: DataTypes.ENUM(
+    "Hot",
+    "Warm",
+    "Cold"
+  ),
+  defaultValue: "Warm",
+},
+
+territory: {
+  type: DataTypes.STRING,
+},
+
+source: {
+  type: DataTypes.STRING,
+},
+
+priority: {
+  type: DataTypes.ENUM(
+    "Low",
+    "Medium",
+    "High"
+  ),
+  defaultValue: "Medium",
+},
+   
     description: {
       type: DataTypes.TEXT,
     },

@@ -24,35 +24,30 @@ Expense.init(
     approvedById: { type: DataTypes.UUID, allowNull: true },
     approvedAt: { type: DataTypes.DATE },
     rejectionReason: { type: DataTypes.TEXT },
-   receipt: {
-  type: DataTypes.STRING,
-  allowNull: true,
-},
-
-receiptOriginalName: {
-  type: DataTypes.STRING,
-  allowNull: true,
-},
-
-receiptMimeType: {
-  type: DataTypes.STRING,
-  allowNull: true,
-},
-
-receiptSize: {
-  type: DataTypes.INTEGER,
-  allowNull: true,
-},
-
-receiptUploadedAt: {
-  type: DataTypes.DATE,
-  allowNull: true,
-},
-
-receiptUploadedById: {
-  type: DataTypes.UUID,
-  allowNull: true,
-},
+    receipt: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    receiptOriginalName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    receiptMimeType: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    receiptSize: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    receiptUploadedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    receiptUploadedById: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
   },
   {
     sequelize,

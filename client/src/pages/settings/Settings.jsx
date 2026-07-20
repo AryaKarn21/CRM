@@ -9,12 +9,17 @@ import Badge from '@/components/ui/Badge'
 import Avatar from '@/components/ui/Avatar'
 import { useForm } from 'react-hook-form'
 import { formatDate } from '@/lib/utils'
+import RoleFormModal from './RoleFormModel'
 import toast from 'react-hot-toast'
 import { useEffect } from 'react'
 //import CompanyTable from '@/components/settings/CompanyTable'
 import { useAuthStore } from '@/store/auth.store'
 import { rolesAPI } from '@/api/roles.api'
 import { authAPI } from '@/api/auth.api'
+import RoleStatCards from './roles/RoleStatCards'
+import RoleCard from './roles/RoleCard'
+import RoleTable from './roles/RoleTable'
+import PermissionMatrixDrawer from './roles/PermissionMatrixDrawer'
 const TABS = [
   { key: 'company', label: 'Company' },
   { key: 'users', label: 'Users' },
@@ -740,99 +745,310 @@ const onSubmit = (data) => {
   )
 
 }
-
 function RolesTab() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['roles'],
-    queryFn: () => settingsAPI.getRoles().then(r => r.data),
+  const queryClient = useQueryClient()
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingRole, setEditingRole] = useState(null)
+  const [viewingRole, setViewingRole] = useState(null)
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [viewMode, setViewMode] = useState('card') // 'card' | 'table'
+  const [selectedIds, setSelectedIds] = useState([])
+
+  // Debounce search input so we don't fire a query on every keystroke —
+  // waits 350ms after the user stops typing before hitting the API.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 350)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['roles', debouncedSearch, statusFilter],
+    queryFn: () => rolesAPI.getAll({ search: debouncedSearch, status: statusFilter }).then((res) => res.data),
   })
 
-  const { data: rolesData, isLoading: rolesLoading } = useQuery({
-  queryKey: ['roles'],
-  queryFn: () => rolesAPI.getAll().then(res => res.data),
-})
+  const roles = data?.roles || []
 
-const roles = rolesData?.roles || []
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+  } = useForm({ defaultValues: { name: '', description: '', permissions: {} } })
 
-  if (isLoading) {
-    return (
-      <div className="h-40 animate-pulse rounded-lg" style={{ background: 'var(--border)' }} />
-    )
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['roles'] })
+    queryClient.invalidateQueries({ queryKey: ['roles-stats'] })
   }
 
+  const createMutation = useMutation({
+    mutationFn: (values) => rolesAPI.create(values),
+    onSuccess: () => { invalidate(); closeModal(); toast.success('Role created') },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Failed to create role'),
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, values }) => rolesAPI.update(id, values),
+    onSuccess: () => { invalidate(); closeModal(); toast.success('Role updated') },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Failed to update role'),
+  })
+
+  const cloneMutation = useMutation({
+    mutationFn: (id) => rolesAPI.clone(id),
+    onSuccess: () => { invalidate(); toast.success('Role cloned') },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Failed to clone role'),
+  })
+
+  const activateMutation = useMutation({
+    mutationFn: (id) => rolesAPI.activate(id),
+    onSuccess: () => { invalidate(); toast.success('Role activated') },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Failed to activate role'),
+  })
+
+  const deactivateMutation = useMutation({
+    mutationFn: (id) => rolesAPI.deactivate(id),
+    onSuccess: () => { invalidate(); toast.success('Role deactivated') },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Failed to deactivate role'),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => rolesAPI.delete(id),
+    onSuccess: () => { invalidate(); toast.success('Role moved to trash') },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Failed to delete role'),
+  })
+
+  const restoreMutation = useMutation({
+    mutationFn: (id) => rolesAPI.restore(id),
+    onSuccess: () => { invalidate(); toast.success('Role restored') },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Failed to restore role'),
+  })
+
+  const permanentDeleteMutation = useMutation({
+    mutationFn: (id) => rolesAPI.permanentDelete(id),
+    onSuccess: () => { invalidate(); toast.success('Role permanently deleted') },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Failed to permanently delete role'),
+  })
+
+  const bulkActivateMutation = useMutation({
+    mutationFn: (ids) => rolesAPI.bulkActivate(ids),
+    onSuccess: () => { invalidate(); setSelectedIds([]); toast.success('Roles activated') },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Bulk activate failed'),
+  })
+  const bulkDeactivateMutation = useMutation({
+    mutationFn: (ids) => rolesAPI.bulkDeactivate(ids),
+    onSuccess: () => { invalidate(); setSelectedIds([]); toast.success('Roles deactivated') },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Bulk deactivate failed'),
+  })
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids) => rolesAPI.bulkDelete(ids),
+    onSuccess: () => { invalidate(); setSelectedIds([]); toast.success('Roles moved to trash') },
+    onError: (err) => toast.error(err?.response?.data?.message || 'Bulk delete failed'),
+  })
+
+  const openCreateModal = () => {
+    setEditingRole(null)
+    reset({ name: '', description: '', permissions: {} })
+    setModalOpen(true)
+  }
+
+  const openEditModal = (role) => {
+    setEditingRole(role)
+    reset({ name: role.name || '', description: role.description || '', permissions: role.permissions || {} })
+    setModalOpen(true)
+  }
+
+  const closeModal = () => {
+    setModalOpen(false)
+    setEditingRole(null)
+  }
+
+  const onSubmit = (values) => {
+    if (!values.name?.trim()) {
+      toast.error('Role name is required')
+      return
+    }
+    if (editingRole) updateMutation.mutate({ id: editingRole.id, values })
+    else createMutation.mutate(values)
+  }
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+
+  const toggleSelectAll = () =>
+    setSelectedIds((prev) => (prev.length === roles.length ? [] : roles.map((r) => r.id)))
+
+  const anyBulkPending =
+    bulkActivateMutation.isPending || bulkDeactivateMutation.isPending || bulkDeleteMutation.isPending
+
   return (
-    <div className="flex flex-col gap-4">
-      {data?.roles?.map(role => (
-        <div key={role.id} className="rounded-xl border p-4" style={{ borderColor: 'var(--border)' }}>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-[14px] font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {role.name}
-              </p>
-              <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-                {role.description}
-              </p>
-            </div>
-            <Badge variant="info">{role.userCount} users</Badge>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {role.permissions?.map(p => (
-              <span
-                key={p}
-                className="px-2 py-0.5 text-[11px] rounded-full font-medium"
-                style={{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }}
-              >
-                {p}
-              </span>
-            ))}
-          </div>
-        </div>
-      )) || (
-         <div className="space-y-3">
+    <div className="flex flex-col gap-4 sm:gap-5">
+      <RoleStatCards />
 
-  {rolesLoading && (
-    <p>Loading roles...</p>
-  )}
+      {/* Toolbar: search, filter, view toggle, create */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <input
+          className="input flex-1"
+          placeholder="Search roles..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search roles"
+        />
+        <select
+          className="input sm:w-40"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          aria-label="Filter by status"
+        >
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
 
-  {!rolesLoading && roles.length === 0 && (
-    <p className="text-center text-gray-500 py-10">
-      No roles configured
-    </p>
-  )}
-
-  {!rolesLoading &&
-    roles.map((role) => (
-      <div
-        key={role.id}
-        className="flex items-center justify-between border rounded-lg p-4"
-      >
-        <div>
-          <h3 className="font-semibold">
-            {role.name}
-          </h3>
-
-          <p className="text-sm text-gray-500">
-            {role.description}
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-
-          <button className="btn btn-secondary btn-sm">
-            Edit
+        <div className="flex rounded-lg border overflow-hidden shrink-0" style={{ borderColor: 'var(--border)' }}>
+          <button
+            type="button"
+            className="px-3 py-2 text-[12px] transition-colors"
+            style={{
+              background: viewMode === 'card' ? 'var(--surface-2)' : 'transparent',
+              color: 'var(--text-primary)',
+              fontWeight: viewMode === 'card' ? 600 : 400,
+            }}
+            onClick={() => setViewMode('card')}
+            aria-pressed={viewMode === 'card'}
+          >
+            Cards
           </button>
+          <button
+            type="button"
+            className="px-3 py-2 text-[12px] transition-colors"
+            style={{
+              background: viewMode === 'table' ? 'var(--surface-2)' : 'transparent',
+              color: 'var(--text-primary)',
+              fontWeight: viewMode === 'table' ? 600 : 400,
+            }}
+            onClick={() => setViewMode('table')}
+            aria-pressed={viewMode === 'table'}
+          >
+            Table
+          </button>
+        </div>
 
-          <button className="btn btn-danger btn-sm">
+        <button className="btn btn-primary shrink-0" onClick={openCreateModal}>
+          Create Role
+        </button>
+      </div>
+
+      {/* Bulk action bar — only shows when something is selected */}
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-lg" style={{ background: 'var(--surface-2)' }}>
+          <span className="text-[12px] font-medium" style={{ color: 'var(--text-primary)' }}>
+            {selectedIds.length} selected
+          </span>
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled={anyBulkPending}
+            onClick={() => bulkActivateMutation.mutate(selectedIds)}
+          >
+            Activate
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled={anyBulkPending}
+            onClick={() => bulkDeactivateMutation.mutate(selectedIds)}
+          >
+            Deactivate
+          </button>
+          <button
+            className="btn btn-ghost btn-sm text-red-500"
+            disabled={anyBulkPending}
+            onClick={() => {
+              if (confirm(`Move ${selectedIds.length} role(s) to trash?`)) bulkDeleteMutation.mutate(selectedIds)
+            }}
+          >
             Delete
           </button>
-
+          <button className="btn btn-ghost btn-sm ml-auto" onClick={() => setSelectedIds([])}>
+            Clear
+          </button>
         </div>
+      )}
 
-      </div>
-    ))}
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-40 animate-pulse rounded-xl" style={{ background: 'var(--border)' }} />
+          ))}
+        </div>
+      ) : isError ? (
+        <div className="card p-6 text-center">
+          <p className="text-[13px] font-medium text-red-500">Failed to load roles</p>
+          <p className="text-[12px] mt-1" style={{ color: 'var(--text-muted)' }}>
+            {error?.response?.data?.message || 'Something went wrong. Please try again.'}
+          </p>
+          <button className="btn btn-secondary btn-sm mt-3" onClick={() => queryClient.invalidateQueries({ queryKey: ['roles'] })}>
+            Retry
+          </button>
+        </div>
+      ) : roles.length === 0 ? (
+        <div className="card p-10 text-center">
+          <p className="text-[14px] font-medium" style={{ color: 'var(--text-primary)' }}>
+            {debouncedSearch || statusFilter ? 'No roles match your filters' : 'No roles yet'}
+          </p>
+          <p className="text-[12px] mt-1" style={{ color: 'var(--text-muted)' }}>
+            {debouncedSearch || statusFilter ? 'Try adjusting your search or filters.' : 'Create your first role to get started.'}
+          </p>
+        </div>
+      ) : viewMode === 'card' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {roles.map((role) => (
+            <RoleCard
+              key={role.id}
+              role={role}
+              selected={selectedIds.includes(role.id)}
+              onToggleSelect={() => toggleSelect(role.id)}
+              onView={setViewingRole}
+              onEdit={openEditModal}
+              onClone={(r) => cloneMutation.mutate(r.id)}
+              onActivate={(r) => activateMutation.mutate(r.id)}
+              onDeactivate={(r) => deactivateMutation.mutate(r.id)}
+              onDelete={(r) => { if (confirm(`Move "${r.name}" to trash?`)) deleteMutation.mutate(r.id) }}
+              onRestore={(r) => restoreMutation.mutate(r.id)}
+              onPermanentDelete={(r) => { if (confirm(`Permanently delete "${r.name}"? This cannot be undone.`)) permanentDeleteMutation.mutate(r.id) }}
+            />
+          ))}
+        </div>
+      ) : (
+        <RoleTable
+          roles={roles}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onToggleSelectAll={toggleSelectAll}
+          onView={setViewingRole}
+          onEdit={openEditModal}
+          onClone={(r) => cloneMutation.mutate(r.id)}
+          onActivate={(r) => activateMutation.mutate(r.id)}
+          onDeactivate={(r) => deactivateMutation.mutate(r.id)}
+          onDelete={(r) => { if (confirm(`Move "${r.name}" to trash?`)) deleteMutation.mutate(r.id) }}
+          onRestore={(r) => restoreMutation.mutate(r.id)}
+          onPermanentDelete={(r) => { if (confirm(`Permanently delete "${r.name}"? This cannot be undone.`)) permanentDeleteMutation.mutate(r.id) }}
+        />
+      )}
 
-</div>
-        )}
+      <RoleFormModal
+        open={modalOpen}
+        onClose={closeModal}
+        register={register}
+        handleSubmit={handleSubmit}
+        onSubmit={onSubmit}
+        loading={createMutation.isPending || updateMutation.isPending}
+        watch={watch}
+        setValue={setValue}
+        mode={editingRole ? 'edit' : 'create'}
+      />
+
+      {viewingRole && <PermissionMatrixDrawer role={viewingRole} onClose={() => setViewingRole(null)} />}
     </div>
   )
 }

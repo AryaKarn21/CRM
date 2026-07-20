@@ -9,7 +9,7 @@ const getCompany = (req) => req.companyId;
 router.get("/", protect, async (req, res, next) => {
   try {
     const company = getCompany(req);
-    const { page = 1, limit = 20, status, employeeId } = req.query;
+    const { page = 1, limit = 20, status, employeeId, search } = req.query;
     const where = {};
     if (company) where.companyId = company;
     if (status) where.status = status;
@@ -25,6 +25,15 @@ router.get("/", protect, async (req, res, next) => {
           model: Employee,
           as: "employee",
           attributes: ["firstName", "lastName", "department", "avatar"],
+          where: search
+            ? {
+                [Op.or]: [
+                  { firstName: { [Op.like]: `%${search}%` } },
+                  { lastName: { [Op.like]: `%${search}%` } },
+                ],
+              }
+            : undefined,
+          required: !!search,
         },
         { model: User, as: "approvedBy", attributes: ["name"] },
       ],

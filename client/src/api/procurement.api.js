@@ -1,18 +1,29 @@
 import api from './axios'
 
 export const procurementAPI = {
+  // Dashboard
+  getDashboardStats: () =>
+    api.get('/procurement/dashboard'),
+
   // Purchase Orders
   getPurchaseOrders: (params) =>
     api.get('/procurement/orders', { params }),
 
+  // Purchase Requests — same underlying endpoint, scoped to draft+pending
+  getPurchaseRequests: (params) =>
+    api.get('/procurement/orders', { params: { ...params, status: params?.status || 'draft,pending' } }),
+
+  submitForApproval: (id) =>
+    api.patch(`/procurement/orders/${id}/submit`),
+
   getPurchaseOrder(id) {
     return api.get(`/procurement/orders/${id}`)
   },
- 
+
   updatePurchaseOrder(id, data) {
     return api.patch(`/procurement/orders/${id}`, data)
   },
- 
+
   getPOById: (id) =>
     api.get(`/procurement/orders/${id}`),
 

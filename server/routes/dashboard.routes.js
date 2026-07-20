@@ -84,6 +84,77 @@ router.get('/activity', protect, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+router.get('/charts', protect, async (req, res, next) => {
+  try {
+    const company = req.headers['x-company-id'] || req.user.companyId
+    const now = new Date()
+    const months = []
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      months.push({ year: d.getFullYear(), month: d.getMonth(), label: d.toLocaleString('en-US', { month: 'short' }) })
+    }
+    const rangeStart = new Date(months[0].year, months[0].month, 1)
+
+    const [leadsRaw, wonOppsRaw, stageOpps, ticketsRaw] = await Promise.all([
+      Lead.findAll({ where: { companyId: company, createdAt: { [Op.gte]: rangeStart } }, attributes: ['createdAt'] }),
+      Opportunity.findAll({ where: { companyId: company, stage: 'Closed Won', updatedAt: { [Op.gte]: rangeStart } }, attributes: ['value', 'updatedAt'] }),
+      Opportunity.findAll({ where: { companyId: company, stage: { [Op.notIn]: ['Closed Won', 'Closed Lost'] } }, attributes: ['stage', 'value'] }),
+      Ticket.findAll({ where: { companyId: company }, attributes: ['status'] }),
+    ])
+
+    const monthKey = (d) => `${d.getFullYear()}-${d.getMonth()}`
+    const leadCounts = {}
+    leadsRaw.forEach(l => { const k = monthKey(new Date(l.createdAt)); leadCounts[k] = (leadCounts[k] || 0) + 1 })
+    const revenueTotals = {}
+    wonOppsRaw.forEach(o => { const k = monthKey(new Date(o.updatedAt)); revenueTotals[k] = (revenueTotals[k] || 0) + (o.value || 0) })
+
+    const trend = months.map(m => {
+      const k = `${m.year}-${m.month}`
+      return { month: m.label, leads: leadCounts[k] || 0, revenue: Math.round(revenueTotals[k] || 0) }
+    })
+
+    const stageTotals = {}
+    stageOpps.forEach(o => { stageTotals[o.stage] = (stageTotals[o.stage] || 0) + (o.value || 0) })
+    const pipelineByStage = Object.entries(stageTotals).map(([stage, value]) => ({ stage, value: Math.round(value) }))
+
+    const statusTotals = {}
+    ticketsRaw.forEach(t => { statusTotals[t.status] = (statusTotals[t.status] || 0) + 1 })
+    const ticketsByStatus = Object.entries(statusTotals).map(([status, count]) => ({ status, count }))
+
+    res.json({ trend, pipelineByStage, ticketsByStatus })
+  } catch (err) { next(err) }
+})
+
+router.get('/top-deals', protect, async (req, res, next) => {
+  try {
+    const company = req.headers['x-company-id'] || req.user.companyId
+    const limit = parseInt(req.query.limit) || 5
+
+    const deals = await Opportunity.findAll({
+      where: { companyId: company, stage: { [Op.notIn]: ['Closed Won', 'Closed Lost'] } },
+      order: [['value', 'DESC']],
+      limit,
+      include: [
+        { model: Account, as: 'account', attributes: ['name'] },
+        { model: User, as: 'assignedTo', attributes: ['name'] },
+      ],
+    })
+
+    res.json({
+      items: deals.map(d => ({
+        id: d.id,
+        name: d.name,
+        account: d.account?.name || '—',
+        owner: d.assignedTo?.name || 'Unassigned',
+        stage: d.stage,
+        value: d.value || 0,
+        probability: d.probability ?? 0,
+        closeDate: d.closeDate,
+      })),
+    })
+  } catch (err) { next(err) }
+})
+
 function timeAgo(date) {
   const seconds = Math.floor((new Date() - new Date(date)) / 1000)
   if (seconds < 60) return 'just now'

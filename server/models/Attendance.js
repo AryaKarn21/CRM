@@ -25,7 +25,11 @@ Attendance.init(
       type: DataTypes.ENUM("present", "absent", "late", "half_day", "holiday"),
       defaultValue: "present",
     },
-    shiftId: { type: DataTypes.UUID, allowNull: true },
+    approvalStatus: {
+      type: DataTypes.ENUM("pending", "approved", "rejected"),
+      defaultValue: "approved",
+    },
+    breakMinutes: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
     notes: { type: DataTypes.TEXT },
   },
   {

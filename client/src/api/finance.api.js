@@ -16,25 +16,21 @@ export const financeAPI = {
   getReports: (type, params) => api.get(`/finance/reports/${type}`, { params }),
   uploadReceipt: (id, formData) =>
     api.post(`/finance/expenses/${id}/receipt`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+      headers: { "Content-Type": "multipart/form-data" },
     }),
-
   viewReceipt: (id) =>
-    api.get(`/finance/expenses/${id}/receipt/view`, {
-      responseType: "blob",
-    }),
-
+    api.get(`/finance/expenses/${id}/receipt`, { responseType: "blob" }),
   downloadReceipt: (id) =>
-    api.get(`/finance/expenses/${id}/download`, {
-      responseType: "blob",
-    }),
-
+    api.get(`/finance/expenses/${id}/download`, { responseType: "blob" }),
   downloadExpenseReport: (id) =>
-    api.get(`/finance/expenses/${id}/report`, {
-      responseType: "blob",
-    }),
-
+    api.get(`/finance/expenses/${id}/report`, { responseType: "blob" }),
   deleteReceipt: (id) => api.delete(`/finance/expenses/${id}/receipt`),
+  updateEntry: (id, data) => api.patch(`/finance/ledger/${id}`, data),
+deleteEntry: (id) => api.delete(`/finance/ledger/${id}`),
+exportData: (type, params = {}) =>
+  api.get("/finance/export", { params: { type, ...params }, responseType: "blob" }),
+importData: (type, formData) =>
+  api.post(`/finance/import?type=${type}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  }),
 };

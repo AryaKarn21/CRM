@@ -17,15 +17,34 @@ router.get("/", protect, async (req, res, next) => {
       });
     }
 
-    const { page = 1, limit = 25, date, status, search } = req.query;
+    const {
+      page = 1,
+      limit = 25,
+      date,
+      dateFrom,
+      dateTo,
+      status,
+      approvalStatus,
+      department,
+      shiftId,
+      search,
+    } = req.query;
     const where = {
       companyId,
     };
     if (status) where.status = status;
-    if (date) {
-      const d = new Date(date);
-      const start = new Date(d.setHours(0, 0, 0, 0));
-      const end = new Date(d.setHours(23, 59, 59, 999));
+    if (approvalStatus) where.approvalStatus = approvalStatus;
+    if (shiftId) where.shiftId = shiftId;
+
+    // Supports both the legacy single `date` param and a `dateFrom`/`dateTo`
+    // range. If only one bound is given, the range collapses to that single day.
+    const rangeStart = dateFrom || date;
+    const rangeEnd = dateTo || dateFrom || date;
+    if (rangeStart) {
+      const start = new Date(rangeStart);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(rangeEnd || rangeStart);
+      end.setHours(23, 59, 59, 999);
       where.date = { [Op.gte]: start, [Op.lte]: end };
     }
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -34,13 +53,18 @@ router.get("/", protect, async (req, res, next) => {
     // dropped rows whose employee didn't match. Sequelize: filter the
     // include directly with `where`, and use `required: true` (inner join)
     // so non-matching rows are excluded by the DB, not after the fact.
-    const employeeWhere = search
-      ? {
-          [Op.or]: [
-            { firstName: { [Op.like]: `%${search}%` } },
-            { lastName: { [Op.like]: `%${search}%` } },
-          ],
-        }
+    const employeeConditions = [];
+    if (search) {
+      employeeConditions.push({
+        [Op.or]: [
+          { firstName: { [Op.like]: `%${search}%` } },
+          { lastName: { [Op.like]: `%${search}%` } },
+        ],
+      });
+    }
+    if (department) employeeConditions.push({ department });
+    const employeeWhere = employeeConditions.length
+      ? { [Op.and]: employeeConditions }
       : undefined;
 
     const { rows: attendance, count: total } = await Attendance.findAndCountAll(
@@ -55,7 +79,7 @@ router.get("/", protect, async (req, res, next) => {
             as: "employee",
             attributes: ["firstName", "lastName", "department", "avatar"],
             where: employeeWhere,
-            required: !!search,
+            required: !!(search || department),
           },
           {
             model: Shift,
@@ -212,7 +236,7 @@ router.patch("/:id", protect, async (req, res, next) => {
 
     
 
-    const { status, checkIn, checkOut, notes } = req.body;
+    const { status, approvalStatus, checkIn, checkOut, notes, breakMinutes } = req.body;
     let hoursWorked = null;
 
 if (checkIn && checkOut) {
@@ -225,10 +249,12 @@ if (checkIn && checkOut) {
 }
     await record.update({
       status,
+      approvalStatus,
       checkIn,
       checkOut,
       shiftId: req.body.shiftId,
       notes,
+      breakMinutes,
        hoursWorked,
     });
 

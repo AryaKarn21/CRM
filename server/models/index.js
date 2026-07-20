@@ -46,6 +46,21 @@ import OTP from "./OTP.js";
 import Notification from "./Notification.js";
 import NotificationPreference from "./NotificationPreference.js";
 import DailyReport from "./DailyReport.js";
+// Email module — models + associations live in EmailModels.js
+import {
+  emailmodels,
+  EmailAccount,
+  EmailThread,
+  Email,
+  EmailAttachment,
+  EmailTemplate,
+  EmailSignature,
+  EmailLabel,
+  EmailFolder,
+  EmailRule,
+  EmailEvent,
+} from "./EmailModels.js";
+
 
 // ── Company ───────────────────────────────────────────────
 Company.hasMany(Company, { as: "children", foreignKey: "parentId" });
@@ -414,6 +429,7 @@ TicketReply.belongsTo(User, { as: "author", foreignKey: "authorId" });
 AuditLog.belongsTo(Company, { foreignKey: "companyId" });
 AuditLog.belongsTo(User, { as: "user", foreignKey: "userId" });
 
+
 // Make every model emit `_id` (aliasing the real `id`) in its JSON output,
 // so the existing React frontend — which expects Mongo-style `_id` in 22+
 // places — keeps working without any client-side changes.
@@ -461,6 +477,17 @@ const allModels = [
   NotificationPreference,
   PerformanceReview,
    DailyReport,
+   EmailAccount,
+  EmailThread,
+  Email,
+  EmailAttachment,
+  EmailTemplate,
+  EmailSignature,
+  EmailLabel,
+  EmailFolder,
+  EmailRule,
+  EmailEvent,
+  
 ];
 allModels.forEach(withMongoCompatJSON);
 
@@ -506,4 +533,14 @@ export {
   NotificationPreference,
   PerformanceReview,
    DailyReport,
+   EmailAccount,
+  EmailThread,
+  Email,
+  EmailAttachment,
+  EmailTemplate,
+  EmailSignature,
+  EmailLabel,
+  EmailFolder,
+  EmailRule,
+  EmailEvent,
 };
